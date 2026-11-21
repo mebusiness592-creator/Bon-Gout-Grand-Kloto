@@ -3,11 +3,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { ImageUploader } from "./ImageUploader";
-import { fcfa, productImage } from "@/lib/pricing";
+import { fcfa, priceLabel, productImage } from "@/lib/pricing";
 
-export type Field = { name: string; label: string; type: "text" | "textarea" | "number" | "bool" | "select" | "images" | "media"; options?: { value: string; label: string }[]; required?: boolean; help?: string };
+export type Field = { name: string; label: string; type: "text" | "textarea" | "number" | "bool" | "select" | "images" | "image" | "variants" | "media"; options?: { value: string; label: string }[]; required?: boolean; help?: string };
 export type Col = { key: string; label: string; type?: "text" | "money" | "bool" | "image" | "map" | "media" };
 type Item = Record<string, unknown> & { _id: string };
+type Variant = { id: string; label: string; image: string };
+const newId = () => Math.random().toString(36).slice(2, 10);
+const isVideo = (u: string) => /\.(mp4|webm|mov)$/i.test(u);
 
 export function ResourceManager({ resource, title, noun, items, fields, cols, maps = {}, defaults = {} }: {
   resource: string; title: string; noun: string; items: Item[]; fields: Field[]; cols: Col[];
@@ -24,11 +27,18 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
     for (const f of fields) {
       const cur = item ? item[f.name] : undefined;
       if (f.type === "images") v[f.name] = Array.isArray(cur) ? cur : (item && typeof item.imageUrl === "string" && f.name === "images" ? [item.imageUrl] : []);
+      else if (f.type === "variants") v[f.name] = Array.isArray(cur) ? cur : [];
+      else if (f.type === "image") v[f.name] = typeof cur === "string" ? cur : "";
       else if (f.type === "bool") v[f.name] = cur === undefined ? (v[f.name] ?? (f.name === "available")) : Boolean(cur);
-      else if (f.type === "media") { v.url = item?.url ?? ""; v.kind = item?.kind ?? "image"; }
+      else if (f.type === "media") v[f.name] = [];
+      else if (f.name === "priceText") v[f.name] = item ? (item.priceMax ? `${item.price}-${item.priceMax}` : String(item.price ?? "")) : "";
       else v[f.name] = cur ?? v[f.name] ?? "";
     }
     setForm(v);
+  }
+  async function send(url: string, method: string, body: unknown) {
+    const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    return { ok: r.ok, d: await r.json().catch(() => ({})) };
   }
   async function save(e: React.FormEvent) {
     e.preventDefault(); if (!form) return;
@@ -38,14 +48,21 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
       const v = form[f.name];
       if (f.type === "number") body[f.name] = v === "" || v === null || v === undefined ? (f.required ? 0 : null) : Number(v);
       else if (f.type === "select" && !f.required) body[f.name] = v === "" ? null : v;
-      else if (f.type === "media") { body.url = form.url; body.kind = form.kind; }
+      else if (f.type === "variants") body[f.name] = ((v as Variant[]) || []).filter((x) => x.label.trim()).map((x) => ({ id: x.id, label: x.label.trim(), image: x.image || "" }));
       else if (f.type === "text" || f.type === "textarea") body[f.name] = typeof v === "string" ? v : "";
-      else body[f.name] = v;
+      else if (f.type !== "media") body[f.name] = v;
     }
-    const r = await fetch(`/api/admin/${resource}${editId ? "/" + editId : ""}`, { method: editId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const d = await r.json().catch(() => ({}));
+    let res = { ok: true, d: {} as { error?: string } };
+    if (resource === "media") {
+      const urls = (form.urls as string[]) || [];
+      if (!urls.length) { setBusy(false); return setErr("Ajoutez au moins une photo ou vidéo."); }
+      for (const u of urls) {
+        res = await send("/api/admin/media", "POST", { url: u, kind: isVideo(u) ? "video" : "image", placement: form.placement, title: form.title || "" });
+        if (!res.ok) break;
+      }
+    } else res = await send(`/api/admin/${resource}${editId ? "/" + editId : ""}`, editId ? "PATCH" : "POST", body);
     setBusy(false);
-    if (!r.ok) return setErr(d.error || "Enregistrement impossible.");
+    if (!res.ok) return setErr(res.d.error || "Enregistrement impossible.");
     setForm(null); router.refresh();
   }
   async function del(it: Item) {
@@ -60,13 +77,15 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
   const hasAvail = fields.some((f) => f.name === "available");
   const cell = (it: Item, c: Col) => {
     const v = it[c.key];
-    if (c.type === "money") return fcfa(Number(v || 0)) + (it.promoPrice && c.key === "price" ? ` → ${fcfa(Number(it.promoPrice))}` : "");
+    if (c.type === "money") return c.key === "price" ? priceLabel({ price: Number(it.price || 0), priceMax: it.priceMax as number | null, promoPrice: it.promoPrice as number | null }) + (it.promoPrice && !it.priceMax ? ` → ${fcfa(Number(it.promoPrice))}` : "") : fcfa(Number(v || 0));
     if (c.type === "bool") return v ? "Oui" : "Non";
-    if (c.type === "image") return productImage(it as never) ? <img src={productImage(it as never)} alt="" /> : "—";
-    if (c.type === "media") return /\.(mp4|webm|mov)$/i.test(String(v)) ? <video src={String(v)} style={{ width: 60, height: 44 }} /> : <img src={String(v)} alt="" />;
+    if (c.type === "image") { const u = productImage(it as never); return u ? <img src={u} alt="" /> : "—"; }
+    if (c.type === "media") return isVideo(String(v)) ? <video src={String(v)} style={{ width: 60, height: 44 }} /> : <img src={String(v)} alt="" />;
     if (c.type === "map") return maps[c.key]?.[String(v)] || (typeof it.category === "string" && c.key === "categoryId" ? it.category : "—");
+    if (Array.isArray(v)) return `${v.length}`;
     return v === undefined || v === null || v === "" ? "—" : String(v);
   };
+  const set = (name: string, val: unknown) => setForm((p) => ({ ...(p || {}), [name]: val }));
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: ".6rem", flexWrap: "wrap" }}>
@@ -95,13 +114,24 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
             {err && <div className="err" role="alert">{err}</div>}
             {fields.map((f) => (
               <div key={f.name}>
-                {f.type === "bool" ? <div className="check" style={{ marginTop: ".8rem" }}><input id={f.name} type="checkbox" checked={Boolean(form[f.name])} onChange={(e) => setForm({ ...form, [f.name]: e.target.checked })} /><label htmlFor={f.name}>{f.label}</label></div> : <>
+                {f.type === "bool" ? <div className="check" style={{ marginTop: ".8rem" }}><input id={f.name} type="checkbox" checked={Boolean(form[f.name])} onChange={(e) => set(f.name, e.target.checked)} /><label htmlFor={f.name}>{f.label}</label></div> : <>
                   <label htmlFor={f.name}>{f.label}{f.required ? " *" : ""}</label>
-                  {f.type === "textarea" ? <textarea id={f.name} rows={3} value={String(form[f.name] ?? "")} onChange={(e) => setForm({ ...form, [f.name]: e.target.value })} />
-                    : f.type === "select" ? <select id={f.name} value={String(form[f.name] ?? "")} onChange={(e) => setForm({ ...form, [f.name]: e.target.value })} required={f.required}>{!f.required && <option value="">—</option>}{f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-                    : f.type === "images" ? <ImageUploader value={(form[f.name] as string[]) || []} onChange={(v) => setForm({ ...form, [f.name]: v })} />
-                    : f.type === "media" ? <ImageUploader video max={1} value={form.url ? [String(form.url)] : []} onChange={(v) => setForm({ ...form, url: v[0] || "" })} onUploaded={(r) => setForm((p) => ({ ...(p || {}), kind: r.kind }))} />
-                    : <input id={f.name} type={f.type === "number" ? "number" : "text"} min={f.type === "number" ? 0 : undefined} step={f.type === "number" ? 1 : undefined} value={String(form[f.name] ?? "")} onChange={(e) => setForm({ ...form, [f.name]: e.target.value })} required={f.required} />}
+                  {f.type === "textarea" ? <textarea id={f.name} rows={3} value={String(form[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)} />
+                    : f.type === "select" ? <select id={f.name} value={String(form[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)} required={f.required}>{!f.required && <option value="">—</option>}{f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+                    : f.type === "images" ? <ImageUploader value={(form[f.name] as string[]) || []} onChange={(v) => set(f.name, v)} max={8} />
+                    : f.type === "image" ? <ImageUploader max={1} value={form[f.name] ? [String(form[f.name])] : []} onChange={(v) => set(f.name, v[0] || "")} />
+                    : f.type === "media" ? <ImageUploader video max={30} value={(form.urls as string[]) || []} onChange={(v) => set("urls", v)} />
+                    : f.type === "variants" ? (
+                      <div>
+                        {((form[f.name] as Variant[]) || []).map((v, idx) => (
+                          <div className="vrow" key={v.id}>
+                            <div><input placeholder="Nom (ex. Sauce d'arachide)" value={v.label} maxLength={60} onChange={(e) => set(f.name, (form[f.name] as Variant[]).map((x, k) => k === idx ? { ...x, label: e.target.value } : x))} />
+                              <ImageUploader max={1} value={v.image ? [v.image] : []} onChange={(u) => set(f.name, (form[f.name] as Variant[]).map((x, k) => k === idx ? { ...x, image: u[0] || "" } : x))} /></div>
+                            <span /><button type="button" className="btn btn-sm btn-danger" onClick={() => set(f.name, (form[f.name] as Variant[]).filter((_, k) => k !== idx))}><Trash2 size={14} /></button>
+                          </div>))}
+                        <button type="button" className="btn btn-sm btn-light" style={{ marginTop: ".5rem" }} onClick={() => set(f.name, [...((form[f.name] as Variant[]) || []), { id: newId(), label: "", image: "" }])}><Plus size={14} /> Ajouter une association</button>
+                      </div>)
+                    : <input id={f.name} type={f.type === "number" ? "number" : "text"} min={f.type === "number" ? 0 : undefined} step={f.type === "number" ? 1 : undefined} value={String(form[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)} required={f.required} />}
                   {f.help && <small className="muted">{f.help}</small>}</>}
               </div>))}
             <div style={{ display: "flex", gap: ".6rem", marginTop: "1.2rem" }}>

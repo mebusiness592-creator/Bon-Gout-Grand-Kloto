@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 const items: [string, string, boolean][] = [
   ["/admin", "Dashboard", false], ["/admin/commandes", "Commandes", false], ["/admin/plats", "Restaurant", false],
-  ["/admin/categories", "Catégories", false], ["/admin/produits", "Production locale", false], ["/admin/clients", "Clients", false],
+  ["/admin/categories", "Spécialités / catégories", false], ["/admin/produits", "Produits locaux", false], ["/admin/clients", "Clients", false],
   ["/admin/livraisons", "Livraisons", false], ["/admin/paiements", "Paiements", false], ["/admin/galerie", "Galerie", false],
   ["/admin/notifications", "Notifications", false], ["/admin/utilisateurs", "Utilisateurs & rôles", true], ["/admin/parametres", "Paramètres", true],
 ];

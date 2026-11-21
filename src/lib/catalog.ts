@@ -7,6 +7,11 @@ export async function getCategories(section?: Section): Promise<Category[]> {
     return plain(await (await getDb()).collection("categories").find(q).sort({ order: 1, name: 1 }).toArray());
   } catch { return []; }
 }
+export async function getCategory(id: string): Promise<Category | null> {
+  const _id = oid(id);
+  if (!_id) return null;
+  try { const d = await (await getDb()).collection("categories").findOne({ _id }); return d ? plain(d) : null; } catch { return null; }
+}
 export async function getProducts(o: { section?: Section; categoryId?: string; q?: string; limit?: number; featured?: boolean; onlyAvailable?: boolean }): Promise<Product[]> {
   try {
     const f: Record<string, unknown> = {};

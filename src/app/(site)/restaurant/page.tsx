@@ -2,14 +2,16 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getMedia } from "@/lib/catalog";
 import { getSettings } from "@/lib/settings";
+import { Slides } from "@/components/Slides";
 export const metadata: Metadata = { title: "Le restaurant" };
 
 export default async function Restaurant() {
-  const [s, media] = await Promise.all([getSettings(), getMedia("restaurant", 12)]);
+  const [s, media, banners] = await Promise.all([getSettings(), getMedia("restaurant", 12), getMedia("accueil-restaurant", 10)]);
+  const hero = banners.filter((m) => m.kind === "image").map((m) => m.url);
   const specs = ["Cuisine africaine", "Cuisine européenne", "Fast-food", "Fufu et pâte", "Riz et préparations", "Poulet, poisson et viande", "Grillades et barbecue", "Shawarma", "Burgers"];
   return (
     <>
-      <section className="hero"><div className="container in"><span className="tag">Restaurant</span><h1>Restaurant Bon Goût</h1><p>Une table généreuse où la cuisine africaine rencontre les saveurs européennes et le fast-food, avec des spécialités selon les jours.</p>
+      <section className="hero"><Slides images={hero} />{hero.length > 0 && <div className="shade" />}<div className="container in"><span className="tag">Restaurant</span><h1>Restaurant Bon Goût</h1><p>Une table généreuse où la cuisine africaine rencontre les saveurs européennes et le fast-food, avec des spécialités selon les jours.</p>
         <div className="cta"><Link href="/menu" className="btn btn-gold">Voir le menu</Link><Link href="/menu" className="btn btn-primary">Commander</Link></div></div></section>
       <section className="section container split">
         <div><span className="eyebrow">Nos spécialités</span><h2>Ce que vous allez adorer</h2><div className="chips">{specs.map((x) => <span key={x} className="chip">{x}</span>)}</div>

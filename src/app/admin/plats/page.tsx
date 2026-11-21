@@ -14,10 +14,11 @@ export default async function Page() {
   const fields: Field[] = [
     { name: "name", label: "Nom du plat", type: "text", required: true },
     { name: "description", label: "Description", type: "textarea" },
-    { name: "price", label: "Prix (FCFA)", type: "text", required: true },
+    { name: "priceText", label: "Prix (FCFA)", type: "text", required: true, help: "Un prix fixe (ex. 1500) ou une fourchette avec un tiret (ex. 500-5000) : le client choisira son montant dans l'intervalle." },
     { name: "promoPrice", label: "Prix promotionnel (FCFA)", type: "number", help: "Laisser vide s'il n'y a pas de promotion." },
     { name: "categoryId", label: "Catégorie", type: "select", options: categories.map((c) => ({ value: c._id, label: c.name })) },
-    { name: "images", label: "Photos", type: "images" },
+    { name: "images", label: "Galerie de photos du plat", type: "images" },
+    { name: "variants", label: "Associations / options à choisir par le client (avec photo)", type: "variants", help: "Ex. : Foufou + sauce d'arachide, Foufou + sauce tomate. Le client choisit avant de commander." },
     { name: "available", label: "Disponible à la commande", type: "bool" },
     { name: "featured", label: "Mettre en avant (plat populaire)", type: "bool" },
   ];

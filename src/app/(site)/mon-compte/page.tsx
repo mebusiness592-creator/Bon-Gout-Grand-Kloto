@@ -30,6 +30,7 @@ export default async function Account() {
               <Link key={o._id} href={`/commande/${o._id}`} className="panel" style={{ display: "block", textDecoration: "none", marginBottom: ".8rem" }}>
                 <div className="total"><strong>{o.reference}</strong><strong>{fcfa(o.total)}</strong></div>
                 <div className="muted" style={{ fontSize: ".85rem" }}>{fdate(o.createdAt)}</div>
+                <div className="mini">{o.items.slice(0, 5).map((i, k) => i.image ? <img key={k} src={i.image} alt={i.name} title={i.name} /> : null)}</div>
                 <p style={{ margin: ".4rem 0 0" }}><span className="pill">{ORDER_STATUS[o.status] || o.status}</span> <span className="pill">{PAYMENT_STATUS[o.paymentStatus] || o.paymentStatus}</span> <span className="pill">{DELIVERY_STATUS[o.deliveryStatus || "to_prepare"]}</span></p>
               </Link>))}
           {ns.length > 0 && <><h2 style={{ fontSize: "1.4rem", marginTop: "1.5rem" }}>Notifications</h2>{ns.map((n) => <div key={n._id} className="panel" style={{ marginBottom: ".6rem" }}><strong>{n.title}</strong><div className="muted" style={{ fontSize: ".9rem" }}>{n.message} · {fdate(n.createdAt)}</div></div>)}</>}

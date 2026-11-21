@@ -13,6 +13,6 @@ export const DELIVERY_STATUS: Record<string, string> = {
 export const ROLE_LABEL: Record<string, string> = { customer: "Client", staff: "Employé", admin: "Administrateur" };
 export const SECTION_LABEL: Record<string, string> = { restaurant: "Restaurant", huile: "Production locale", mixte: "Mixte" };
 export const PLACEMENTS: Record<string, string> = {
-  "accueil-restaurant": "Bannière d'accueil (restaurant)", restaurant: "Présentation du restaurant",
-  "production-locale": "Production locale", galerie: "Galerie générale",
+  "accueil-restaurant": "Bannière du restaurant (défile toutes les 4,5 s)", restaurant: "Présentation du restaurant",
+  "production-locale": "Bannière des produits locaux (défile toutes les 4,5 s)", galerie: "Galerie générale",
 };

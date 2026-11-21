@@ -29,7 +29,7 @@ export default async function Confirmation({ params, searchParams }: { params: P
       <p>Numéro de commande : <strong>{o.reference}</strong> · {fdate(o.createdAt)}</p>
       <div className="panel">
         <p><span className="pill">{ORDER_STATUS[o.status] || o.status}</span> <span className="pill">{PAYMENT_STATUS[o.paymentStatus] || o.paymentStatus}</span> <span className="pill">{DELIVERY_STATUS[o.deliveryStatus || "to_prepare"]}</span></p>
-        {o.items.map((i) => <div className="total" key={i.productId}><span>{i.quantity} × {i.name}</span><span>{fcfa(i.quantity * i.unitPrice)}</span></div>)}
+        {o.items.map((i, k) => <div className="oline" key={k}>{i.image ? <img src={i.image} alt="" /> : <div className="ph">🍽️</div>}<span>{i.quantity} × {i.name}{i.variantLabel ? <><br /><small className="muted">{i.variantLabel}</small></> : null}</span><strong>{fcfa(i.quantity * i.unitPrice)}</strong></div>)}
         {typeof o.deliveryFee === "number" && <div className="total"><span>Livraison</span><span>{fcfa(o.deliveryFee)}</span></div>}
         <div className="total big"><span>Total</span><span>{fcfa(o.total)}</span></div>
         <p className="muted">Livraison : {o.address}{o.city ? `, ${o.city}` : ""}{o.location ? " (position GPS enregistrée)" : ""}</p>

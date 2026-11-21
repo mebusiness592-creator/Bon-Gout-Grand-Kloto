@@ -1,5 +1,6 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { MobileTabBar } from "@/components/MobileTabBar";
 import { getCurrentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 
@@ -10,8 +11,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <>
       <SiteHeader name={s.name} user={user ? { name: user.firstName, role: user.role } : null} />
-      <main>{children}</main>
+      <main className="site-main">{children}</main>
       <SiteFooter s={s} />
+      <MobileTabBar accountHref={user ? (user.role === "customer" ? "/mon-compte" : "/admin") : "/connexion"} />
     </>
   );
 }

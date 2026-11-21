@@ -15,11 +15,12 @@ export default async function Page() {
     { name: "name", label: "Nom du produit", type: "text", required: true },
     { name: "description", label: "Description", type: "textarea" },
     { name: "format", label: "Conditionnement / format", type: "text", help: "Ex. : bouteille 1 L, bidon 5 L…" },
-    { name: "price", label: "Prix (FCFA)", type: "number", required: true },
+    { name: "priceText", label: "Prix (FCFA)", type: "text", required: true, help: "Un prix fixe (ex. 1500) ou une fourchette avec un tiret (ex. 500-5000) : le client choisira son montant dans l'intervalle." },
     { name: "promoPrice", label: "Prix promotionnel (FCFA)", type: "number" },
     { name: "stock", label: "Stock", type: "number", help: "Laisser vide = stock non suivi." },
     { name: "categoryId", label: "Catégorie", type: "select", options: categories.map((c) => ({ value: c._id, label: c.name })) },
-    { name: "images", label: "Photos", type: "images" },
+    { name: "images", label: "Galerie de photos", type: "images" },
+    { name: "variants", label: "Variantes à choisir par le client (avec photo)", type: "variants", help: "Ex. : différents conditionnements ou variétés." },
     { name: "available", label: "Disponible à la vente", type: "bool" },
   ];
   return <ResourceManager resource="produits" title="Production locale" noun="produit" items={plain(items)} fields={fields}

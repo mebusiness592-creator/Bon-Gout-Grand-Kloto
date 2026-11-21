@@ -62,7 +62,7 @@ export function OrdersManager({ orders, mode }: { orders: Order[]; mode: Mode })
             {list.length === 0 && <tr><td colSpan={5} className="muted">Aucune commande.</td></tr>}
             {list.map((o) => (
               <tr key={o._id} className={sel === o._id ? "sel" : ""} style={{ cursor: "pointer" }} onClick={() => pick(o)}>
-                <td><strong>{o.reference}</strong><br /><small className="muted">{SECTION_LABEL[o.section] || o.section}</small></td>
+                <td><strong>{o.reference}</strong><br /><small className="muted">{SECTION_LABEL[o.section] || o.section}</small><div className="mini">{o.items.slice(0, 3).map((i, k) => i.image ? <img key={k} src={i.image} alt="" /> : null)}</div></td>
                 <td>{o.customerName}<br /><small className="muted">{o.phone}</small></td><td>{fcfa(o.total)}</td>
                 <td>{mode === "payments" ? <span className={`badge ${payTone(o.paymentStatus)}`}>{PAYMENT_STATUS[o.paymentStatus] || o.paymentStatus}</span>
                   : mode === "deliveries" ? DELIVERY_STATUS[o.deliveryStatus || "to_prepare"] : <span className="pill">{ORDER_STATUS[o.status] || o.status}</span>}</td>
@@ -74,7 +74,7 @@ export function OrdersManager({ orders, mode }: { orders: Order[]; mode: Mode })
             <p style={{ margin: 0 }}><strong>{current.customerName}</strong> · <a href={`tel:${current.phone}`}>{current.phone}</a></p>
             <p className="muted" style={{ margin: ".2rem 0" }}>{current.address}{current.city ? `, ${current.city}` : ""}</p>
             {current.notes && <p><em>Note client : {current.notes}</em></p>}
-            {current.items.map((i) => <div className="total" key={i.productId}><span>{i.quantity} × {i.name}</span><span>{fcfa(i.quantity * i.unitPrice)}</span></div>)}
+            {current.items.map((i, k) => <div className="oline" key={k}>{i.image ? <img src={i.image} alt="" /> : <div className="ph">🍽️</div>}<span>{i.quantity} × {i.name}{i.variantLabel ? <><br /><small className="muted">{i.variantLabel}</small></> : null}</span><strong>{fcfa(i.quantity * i.unitPrice)}</strong></div>)}
             {typeof current.deliveryFee === "number" && <div className="total"><span>Livraison</span><span>{fcfa(current.deliveryFee)}</span></div>}
             <div className="total big"><span>Total</span><span>{fcfa(current.total)}</span></div>
             <p>Paiement : <strong>{current.paymentMethod === "ussd" ? `Mobile money ${current.operator || ""}` : "À la livraison"}</strong> <span className={`badge ${payTone(current.paymentStatus)}`}>{PAYMENT_STATUS[current.paymentStatus] || current.paymentStatus}</span></p>

@@ -6,10 +6,12 @@ export type Product = {
   section: Section; categoryId?: string | null; category?: string;
   images?: string[]; imageUrl?: string; available: boolean; featured?: boolean;
   format?: string; stock?: number | null; createdAt?: string;
+  priceMax?: number | null; variants?: Variant[];
 };
-export type Category = { _id: string; name: string; section: Section; order: number };
+export type Variant = { id: string; label: string; image?: string };
+export type Category = { _id: string; name: string; section: Section; order: number; image?: string };
 export type MediaItem = { _id: string; url: string; kind: "image" | "video"; placement: string; title?: string; createdAt?: string };
-export type OrderItem = { productId: string; name: string; section: Section; quantity: number; unitPrice: number };
+export type OrderItem = { productId: string; variantId?: string | null; variantLabel?: string | null; name: string; section: Section; quantity: number; unitPrice: number; image?: string | null };
 export type HistoryEntry = { at: string; by: string; field: string; from?: string; to: string; note?: string };
 export type Order = {
   _id: string; reference: string; userId?: string | null; customerName: string; phone: string;

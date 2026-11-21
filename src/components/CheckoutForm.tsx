@@ -34,7 +34,7 @@ export function CheckoutForm({ deliveryFee, freeFrom, allowCod, allowUssd, defau
     e.preventDefault(); setErr(""); setBusy(true);
     const r = await fetch("/api/orders", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...f, paymentMethod: pay, operator: pay === "ussd" ? operator : undefined, location: loc, items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })) }),
+      body: JSON.stringify({ ...f, paymentMethod: pay, operator: pay === "ussd" ? operator : undefined, location: loc, items: lines.map((l) => ({ productId: l.productId, variantId: l.variantId, unitPrice: l.price, quantity: l.quantity })) }),
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) { setErr(d.error || "Commande impossible."); setBusy(false); return; }
@@ -63,7 +63,7 @@ export function CheckoutForm({ deliveryFee, freeFrom, allowCod, allowUssd, defau
       </div>
       <div className="panel">
         <h3>Votre commande</h3>
-        {lines.map((l) => <div className="total" key={l.productId}><span>{l.quantity} × {l.name}</span><span>{fcfa(l.quantity * l.price)}</span></div>)}
+        {lines.map((l) => <div className="total" key={l.lineId}><span>{l.quantity} × {l.name}{l.variantLabel ? ` (${l.variantLabel})` : ""}</span><span>{fcfa(l.quantity * l.price)}</span></div>)}
         <div className="total"><span>Livraison</span><span>{fee ? fcfa(fee) : "—"}</span></div>
         <div className="total big"><span>Total</span><span>{fcfa(subtotal + fee)}</span></div>
         <button className="btn btn-primary" style={{ width: "100%", marginTop: ".8rem" }} disabled={busy || (!allowUssd && !allowCod)}>{busy ? "Envoi…" : "Confirmer la commande"}</button>

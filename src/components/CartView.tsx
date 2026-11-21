@@ -16,11 +16,11 @@ export function CartView({ deliveryFee, freeFrom }: { deliveryFee: number; freeF
         {groups.map(([title, ls]) => ls.length > 0 && (
           <section key={title}><h3 style={{ marginTop: ".6rem" }}>{title}</h3>
             {ls.map((l) => (
-              <div className="line" key={l.productId}>
+              <div className="line" key={l.lineId}>
                 {l.image ? <img src={l.image} alt="" /> : <div className="ph">{l.section === "restaurant" ? "🍛" : "🌴"}</div>}
-                <div><strong>{l.name}</strong><div className="muted" style={{ fontSize: ".85rem" }}>{fcfa(l.price)}</div>
-                  <div className="qty" style={{ marginTop: ".3rem" }}><button aria-label="Moins" onClick={() => setQty(l.productId, l.quantity - 1)}>−</button><span>{l.quantity}</span><button aria-label="Plus" onClick={() => setQty(l.productId, l.quantity + 1)}>+</button></div></div>
-                <div style={{ textAlign: "right" }}><strong>{fcfa(l.price * l.quantity)}</strong><br /><button className="btn btn-sm btn-danger" onClick={() => remove(l.productId)} aria-label="Retirer"><Trash2 size={14} /></button></div>
+                <div><strong>{l.name}</strong>{l.variantLabel && <div className="muted" style={{ fontSize: ".85rem" }}>{l.variantLabel}</div>}<div className="muted" style={{ fontSize: ".85rem" }}>{fcfa(l.price)}</div>
+                  <div className="qty" style={{ marginTop: ".3rem" }}><button aria-label="Moins" onClick={() => setQty(l.lineId, l.quantity - 1)}>−</button><span>{l.quantity}</span><button aria-label="Plus" onClick={() => setQty(l.lineId, l.quantity + 1)}>+</button></div></div>
+                <div style={{ textAlign: "right" }}><strong>{fcfa(l.price * l.quantity)}</strong><br /><button className="btn btn-sm btn-danger" onClick={() => remove(l.lineId)} aria-label="Retirer"><Trash2 size={14} /></button></div>
               </div>
             ))}</section>
         ))}

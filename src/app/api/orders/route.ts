@@ -17,8 +17,12 @@ const schema = z.object({
   paymentMethod: z.enum(["ussd", "delivery"]),
   operator: z.enum(["TMoney", "Flooz"]).optional(),
   location: z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), accuracy: z.number().optional() }).nullable().optional(),
-  items: z.array(z.object({ productId: z.string().min(1), quantity: z.number().int().min(1).max(30) })).min(1).max(40),
+  items: z.array(z.object({
+    productId: z.string().min(1), variantId: z.string().max(40).optional(),
+    unitPrice: z.number().int().min(0).max(100_000_000).optional(), quantity: z.number().int().min(1).max(30),
+  })).min(1).max(40),
 });
+type Line = { productId: string; variantId?: string; unitPrice?: number; quantity: number };
 
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return json({ error: "Origine refusée." }, 403);
@@ -32,32 +36,56 @@ export async function POST(req: NextRequest) {
     if (data.paymentMethod === "ussd" && !settings.allowUssd) return json({ error: "Le paiement mobile est momentanément indisponible." }, 400);
     if (data.paymentMethod === "delivery" && !settings.allowCod) return json({ error: "Le paiement à la livraison est momentanément indisponible." }, 400);
 
-    // fusion des doublons puis lecture des produits en base : les prix du navigateur ne sont jamais utilisés
-    const qty = new Map<string, number>();
-    for (const it of data.items) qty.set(it.productId, Math.min(30, (qty.get(it.productId) || 0) + it.quantity));
-    const ids = [...qty.keys()].map(oid);
+    const lines = new Map<string, Line>();
+    for (const it of data.items) {
+      const k = `${it.productId}|${it.variantId || ""}|${it.unitPrice ?? ""}`;
+      const cur = lines.get(k);
+      if (cur) cur.quantity = Math.min(30, cur.quantity + it.quantity); else lines.set(k, { ...it });
+    }
+    const pids = [...new Set([...lines.values()].map((l) => l.productId))];
+    const ids = pids.map(oid);
     if (ids.some((x) => !x)) return json({ error: "Produit invalide." }, 400);
     const products = await db.collection("products").find({ _id: { $in: ids as NonNullable<(typeof ids)[number]>[] }, available: true }).toArray();
-    if (products.length !== qty.size) return json({ error: "Un produit n'est plus disponible. Actualisez votre panier." }, 400);
+    if (products.length !== pids.length) return json({ error: "Un produit n'est plus disponible. Actualisez votre panier." }, 400);
+    const pm = new Map(products.map((p) => [p._id.toString(), p]));
 
-    const items = products.map((p) => ({
-      productId: p._id.toString(), name: p.name as string, section: p.section as "restaurant" | "huile",
-      quantity: qty.get(p._id.toString()) as number, unitPrice: effectivePrice({ price: Number(p.price), promoPrice: p.promoPrice }),
-    }));
+    // Les prix viennent TOUJOURS de la base. Seul un prix à fourchette accepte un montant choisi, vérifié dans l'intervalle.
+    const items: Record<string, unknown>[] = [];
+    const qtyByProduct = new Map<string, number>();
+    for (const l of lines.values()) {
+      const p = pm.get(l.productId)!;
+      const variants = (p.variants || []) as { id: string; label: string; image?: string }[];
+      let variant: { id: string; label: string; image?: string } | undefined;
+      if (variants.length) {
+        variant = variants.find((v) => v.id === l.variantId);
+        if (!variant) return json({ error: `Choisissez une option pour « ${p.name} ».` }, 400);
+      }
+      const min = Number(p.price);
+      const max = typeof p.priceMax === "number" ? p.priceMax : null;
+      let unit: number;
+      if (max && max > min) {
+        if (l.unitPrice === undefined || l.unitPrice < min || l.unitPrice > max) return json({ error: `Montant invalide pour « ${p.name} » (entre ${min} et ${max} FCFA).` }, 400);
+        unit = l.unitPrice;
+      } else unit = effectivePrice({ price: min, promoPrice: p.promoPrice });
+      items.push({
+        productId: l.productId, variantId: variant?.id || null, variantLabel: variant?.label || null, name: p.name, section: p.section,
+        quantity: l.quantity, unitPrice: unit, image: variant?.image || p.images?.[0] || p.imageUrl || null,
+      });
+      qtyByProduct.set(l.productId, (qtyByProduct.get(l.productId) || 0) + l.quantity);
+    }
     for (const p of products) {
-      const q = qty.get(p._id.toString()) as number;
+      const q = qtyByProduct.get(p._id.toString()) as number;
       if (typeof p.stock === "number" && p.stock < q) return json({ error: `Stock insuffisant pour « ${p.name} ».` }, 400);
     }
-    const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+    const subtotal = items.reduce((s, i) => s + (i.quantity as number) * (i.unitPrice as number), 0);
     const deliveryFee = settings.freeDeliveryFrom > 0 && subtotal >= settings.freeDeliveryFrom ? 0 : settings.deliveryFee;
-    const sections = new Set(items.map((i) => i.section));
+    const sections = new Set(items.map((i) => i.section as string));
     const section = sections.size > 1 ? "mixte" : [...sections][0];
 
-    // décrément de stock conditionnel (avec annulation si l'un des produits échoue)
     const done: { id: unknown; q: number }[] = [];
     for (const p of products) {
       if (typeof p.stock !== "number") continue;
-      const q = qty.get(p._id.toString()) as number;
+      const q = qtyByProduct.get(p._id.toString()) as number;
       const r = await db.collection("products").updateOne({ _id: p._id, stock: { $gte: q } }, { $inc: { stock: -q } });
       if (!r.modifiedCount) {
         for (const d of done) await db.collection("products").updateOne({ _id: d.id as never }, { $inc: { stock: d.q } });
