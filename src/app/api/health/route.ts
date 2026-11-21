@@ -1,1 +1,3 @@
-import {NextResponse} from "next/server";import {getDb} from "@/lib/db";export async function GET(){try{await getDb();return NextResponse.json({ok:true,database:"connected"});}catch{return NextResponse.json({ok:false,database:"disconnected"},{status:503});}}
+import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
+export function GET() { return NextResponse.json({ ok: true, service: "bon-gout-grand-kloto" }); }

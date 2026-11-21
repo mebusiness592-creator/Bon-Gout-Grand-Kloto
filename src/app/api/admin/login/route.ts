@@ -1,2 +1,0 @@
-import {NextRequest,NextResponse} from "next/server";import {createSession} from "@/lib/auth";
-export async function POST(req:NextRequest){const {email,password}=await req.json().catch(()=>({}));if(!process.env.ADMIN_EMAIL||!process.env.ADMIN_PASSWORD)return NextResponse.json({error:"Identifiants administrateur non configurés."},{status:500});if(email!==process.env.ADMIN_EMAIL||password!==process.env.ADMIN_PASSWORD)return NextResponse.json({error:"Identifiants incorrects."},{status:401});await createSession();return NextResponse.json({ok:true});}

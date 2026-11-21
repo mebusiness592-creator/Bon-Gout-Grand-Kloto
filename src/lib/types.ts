@@ -1,13 +1,26 @@
 export type Section = "restaurant" | "huile";
+export type Role = "customer" | "staff" | "admin";
+
 export type Product = {
-  _id?: string; name: string; description: string; price: number; section: Section;
-  imageUrl?: string; available: boolean; category?: string; createdAt?: string;
+  _id: string; name: string; description?: string; price: number; promoPrice?: number | null;
+  section: Section; categoryId?: string | null; category?: string;
+  images?: string[]; imageUrl?: string; available: boolean; featured?: boolean;
+  format?: string; stock?: number | null; createdAt?: string;
 };
+export type Category = { _id: string; name: string; section: Section; order: number };
+export type MediaItem = { _id: string; url: string; kind: "image" | "video"; placement: string; title?: string; createdAt?: string };
+export type OrderItem = { productId: string; name: string; section: Section; quantity: number; unitPrice: number };
+export type HistoryEntry = { at: string; by: string; field: string; from?: string; to: string; note?: string };
 export type Order = {
-  _id?: string; reference: string; customerName: string; phone: string; address: string;
-  section: Section; items: { productId: string; name: string; quantity: number; unitPrice: number }[];
-  total: number; paymentMethod: "ussd" | "delivery"; operator?: string;
-  location?: { latitude: number; longitude: number; accuracy?: number };
-  status: "pending" | "confirmed" | "preparing" | "delivering" | "delivered" | "cancelled";
-  paymentStatus: "unpaid" | "pending" | "paid"; createdAt: string;
+  _id: string; reference: string; userId?: string | null; customerName: string; phone: string;
+  address: string; city?: string; notes?: string; section: string; items: OrderItem[];
+  subtotal?: number; deliveryFee?: number; total: number;
+  paymentMethod: "ussd" | "delivery"; operator?: string;
+  location?: { latitude: number; longitude: number; accuracy?: number } | null;
+  status: string; paymentStatus: string; deliveryStatus?: string;
+  history?: HistoryEntry[]; createdAt: string;
+};
+export type AppUser = {
+  id: string; firstName: string; lastName: string; email: string; phone: string;
+  role: Role; address?: string; city?: string;
 };

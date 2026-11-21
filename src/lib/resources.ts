@@ -1,0 +1,57 @@
+import { z } from "zod";
+import { Db } from "mongodb";
+import { oid } from "./db";
+import { PLACEMENTS } from "./labels";
+
+const url = z.string().url().max(600).refine((u) => u.startsWith("https://"), "URL https requise.");
+const productBase = z.object({
+  name: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(2000).optional(),
+  price: z.number().int().min(0).max(100_000_000),
+  promoPrice: z.number().int().min(0).nullable().optional(),
+  categoryId: z.string().nullable().optional(),
+  images: z.array(url).max(8).optional(),
+  available: z.boolean().optional(),
+  featured: z.boolean().optional(),
+  format: z.string().trim().max(80).optional(),
+  stock: z.number().int().min(0).nullable().optional(),
+});
+const categoryBase = z.object({ name: z.string().trim().min(2).max(80), section: z.enum(["restaurant", "huile"]), order: z.number().int().min(0).max(9999).optional() });
+const mediaBase = z.object({
+  url, kind: z.enum(["image", "video"]), title: z.string().trim().max(120).optional(),
+  placement: z.string().refine((p) => p in PLACEMENTS, "Emplacement invalide."),
+});
+
+type Def = { collection: string; section?: "restaurant" | "huile"; base: z.AnyZodObject };
+export const RESOURCES: Record<string, Def> = {
+  plats: { collection: "products", section: "restaurant", base: productBase },
+  produits: { collection: "products", section: "huile", base: productBase },
+  categories: { collection: "categories", base: categoryBase },
+  media: { collection: "media", base: mediaBase },
+};
+
+/** Valide le corps et prépare le document (types cohérents : categoryId toujours ObjectId). */
+export async function prepare(name: string, body: unknown, mode: "create" | "update", db: Db): Promise<{ def: Def; doc: Record<string, unknown> } | { error: string }> {
+  const def = RESOURCES[name];
+  if (!def) return { error: "Ressource inconnue." };
+  const schema = mode === "create" ? def.base : def.base.partial();
+  const p = schema.safeParse(body);
+  if (!p.success) return { error: p.error.issues[0]?.message ? `${p.error.issues[0].path.join(".")} : ${p.error.issues[0].message}` : "Données invalides." };
+  const doc: Record<string, unknown> = { ...p.data };
+  if (def.collection === "products") {
+    if (def.section && mode === "create") doc.section = def.section;
+    if ("categoryId" in doc) {
+      if (doc.categoryId) {
+        const id = oid(doc.categoryId);
+        const cat = id ? await db.collection("categories").findOne({ _id: id, section: def.section }) : null;
+        if (!cat) return { error: "Catégorie invalide." };
+        doc.categoryId = id;
+      } else doc.categoryId = null;
+    }
+    if (typeof doc.promoPrice === "number" && typeof doc.price === "number" && doc.promoPrice >= doc.price) doc.promoPrice = null;
+    if (mode === "create") { doc.available = doc.available ?? true; doc.images = doc.images ?? []; doc.createdAt = new Date().toISOString(); }
+  }
+  if (def.collection === "categories" && mode === "create") doc.order = doc.order ?? 0;
+  if (def.collection === "media" && mode === "create") doc.createdAt = new Date().toISOString();
+  return { def, doc };
+}

@@ -1,3 +1,15 @@
-import {NextResponse} from "next/server";import {getDb} from "@/lib/db";import {isAdmin} from "@/lib/auth";
-export async function GET(){if(!await isAdmin())return NextResponse.json({error:"Non autorisé"},{status:401});const db=await getDb();const items=await db.collection("notifications").find({}).sort({createdAt:-1}).limit(100).toArray();return NextResponse.json(items.map(x=>({...x,_id:x._id.toString()})));}
-export async function PATCH(){if(!await isAdmin())return NextResponse.json({error:"Non autorisé"},{status:401});const db=await getDb();await db.collection("notifications").updateMany({read:false},{$set:{read:true}});return NextResponse.json({ok:true});}
+import { NextRequest } from "next/server";
+import { getDb, oid } from "@/lib/db";
+import { guard, json } from "@/lib/guard";
+
+export async function PATCH(req: NextRequest) {
+  const g = await guard(req);
+  if ("error" in g) return g.error;
+  const body = await req.json().catch(() => ({}));
+  const db = await getDb();
+  if (body.all === true) { await db.collection("notifications").updateMany({ audience: { $ne: "user" }, read: false }, { $set: { read: true } }); return json({ ok: true }); }
+  const _id = oid(body.id);
+  if (!_id) return json({ error: "Requête invalide." }, 400);
+  await db.collection("notifications").updateOne({ _id, audience: { $ne: "user" } }, { $set: { read: true } });
+  return json({ ok: true });
+}

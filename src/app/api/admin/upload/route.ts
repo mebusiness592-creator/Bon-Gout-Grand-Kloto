@@ -1,2 +1,12 @@
-import {NextRequest,NextResponse} from "next/server";import {isAdmin} from "@/lib/auth";import {cloudinary} from "@/lib/cloudinary";
-export async function POST(req:NextRequest){if(!await isAdmin())return NextResponse.json({error:"Non autorisé"},{status:401});try{const data=await req.formData();const file=data.get("file");if(!(file instanceof File))return NextResponse.json({error:"Fichier manquant"},{status:400});if(file.size>8*1024*1024)return NextResponse.json({error:"Image limitée à 8 Mo."},{status:400});if(!["image/jpeg","image/png","image/webp"].includes(file.type))return NextResponse.json({error:"Formats acceptés : JPG, PNG, WEBP."},{status:400});const buffer=Buffer.from(await file.arrayBuffer());const result=await new Promise<any>((resolve,reject)=>{const stream=cloudinary.uploader.upload_stream({folder:"bon-gout-grand-kloto",resource_type:"image"},(err,res)=>err?reject(err):resolve(res));stream.end(buffer);});return NextResponse.json({url:result.secure_url});}catch{return NextResponse.json({error:"Échec de l'envoi vers Cloudinary. Vérifiez les clés."},{status:500});}}
+import { NextRequest } from "next/server";
+import { guard, json } from "@/lib/guard";
+import { cloudinaryConfigured, signUpload } from "@/lib/cloudinary";
+
+/** Renvoie une signature Cloudinary : le fichier part directement du navigateur vers Cloudinary, la clé secrète reste côté serveur. */
+export async function POST(req: NextRequest) {
+  const g = await guard(req);
+  if ("error" in g) return g.error;
+  if (!cloudinaryConfigured()) return json({ error: "Cloudinary n'est pas configuré (variables CLOUDINARY_*)." }, 500);
+  const body = await req.json().catch(() => ({}));
+  return json(signUpload(body.kind === "video" ? "video" : "image"));
+}
