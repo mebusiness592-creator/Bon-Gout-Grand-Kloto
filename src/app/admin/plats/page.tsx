@@ -14,7 +14,7 @@ export default async function Page() {
   const fields: Field[] = [
     { name: "name", label: "Nom du plat", type: "text", required: true },
     { name: "description", label: "Description", type: "textarea" },
-    { name: "price", label: "Prix (FCFA)", type: "number", required: true },
+    { name: "price", label: "Prix (FCFA)", type: "text", required: true },
     { name: "promoPrice", label: "Prix promotionnel (FCFA)", type: "number", help: "Laisser vide s'il n'y a pas de promotion." },
     { name: "categoryId", label: "Catégorie", type: "select", options: categories.map((c) => ({ value: c._id, label: c.name })) },
     { name: "images", label: "Photos", type: "images" },
