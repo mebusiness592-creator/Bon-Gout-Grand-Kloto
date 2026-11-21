@@ -1,0 +1,2 @@
+import Link from "next/link";
+export default function SiteHeader(){return <header className="container header"><Link className="logo" href="/">BON GOÛT <span style={{color:"#c18c35"}}>✦</span></Link><nav className="nav"><Link href="/restaurant">Restaurant</Link><Link href="/huile-rouge">Huile rouge</Link><Link className="desktop" href="/#apropos">À propos</Link><Link className="btn btn-dark" href="/restaurant">Commander</Link></nav></header>}

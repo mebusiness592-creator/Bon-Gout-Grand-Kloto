@@ -1,0 +1,3 @@
+import {NextResponse} from "next/server";import {getDb} from "@/lib/db";import {isAdmin} from "@/lib/auth";
+export async function GET(){if(!await isAdmin())return NextResponse.json({error:"Non autorisé"},{status:401});const db=await getDb();const items=await db.collection("notifications").find({}).sort({createdAt:-1}).limit(100).toArray();return NextResponse.json(items.map(x=>({...x,_id:x._id.toString()})));}
+export async function PATCH(){if(!await isAdmin())return NextResponse.json({error:"Non autorisé"},{status:401});const db=await getDb();await db.collection("notifications").updateMany({read:false},{$set:{read:true}});return NextResponse.json({ok:true});}

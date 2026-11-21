@@ -1,0 +1,2 @@
+import {NextResponse} from "next/server";import {getDb} from "@/lib/db";import {isAdmin} from "@/lib/auth";
+export async function GET(){if(!await isAdmin())return NextResponse.json({error:"Non autorisé"},{status:401});const db=await getDb();const orders=await db.collection("orders").find({}).sort({createdAt:-1}).limit(300).toArray();return NextResponse.json(orders.map(o=>({...o,_id:o._id.toString()})));}
