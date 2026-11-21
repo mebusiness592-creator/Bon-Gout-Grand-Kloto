@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
-import type { Order } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +23,11 @@ export default async function Confirmation({
 
   const db = await getDb();
 
-  const order = await db
-    .collection<Order>("orders")
+  const commande = await db
+    .collection("commandes")
     .findOne({ _id: new ObjectId(id) });
 
-  if (!order) {
+  if (!commande) {
     return (
       <main className="container section">
         <h1>Commande introuvable</h1>
@@ -38,14 +37,14 @@ export default async function Confirmation({
   }
 
   const template =
-    order.operator === "Flooz"
+    commande.operator === "Flooz"
       ? process.env.USSD_Flooz_TEMPLATE
       : process.env.USSD_TMoney_TEMPLATE;
 
   const ussd = template
-    ?.replace("{amount}", String(order.total))
-    .replace("{reference}", order.reference)
-    .replace("{phone}", order.phone);
+    ?.replace("{amount}", String(commande.total))
+    .replace("{reference}", commande.reference)
+    .replace("{phone}", commande.phone);
 
   return (
     <main className="container section" style={{ maxWidth: 700 }}>
@@ -57,21 +56,21 @@ export default async function Confirmation({
         </h1>
 
         <p>
-          Référence : <strong>{order.reference}</strong>
+          Référence : <strong>{commande.reference}</strong>
         </p>
 
-        <h2>{order.total.toLocaleString("fr-FR")} F CFA</h2>
+        <h2>{commande.total.toLocaleString("fr-FR")} F CFA</h2>
 
         <p>
           Statut :{" "}
-          {order.status === "pending"
+          {commande.status === "pending"
             ? "En attente de confirmation"
-            : order.status}
+            : commande.status}
         </p>
 
-        {order.paymentMethod === "ussd" ? (
+        {commande.paymentMethod === "ussd" ? (
           <>
-            <p>Opérateur choisi : {order.operator}</p>
+            <p>Opérateur choisi : {commande.operator}</p>
 
             {ussd ? (
               <>
