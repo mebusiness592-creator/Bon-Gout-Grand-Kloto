@@ -15,7 +15,8 @@ const productBase = z.object({
   featured: z.boolean().optional(),
   format: z.string().trim().max(80).optional(),
   stock: z.number().int().min(0).nullable().optional(),
-  variants: z.array(z.object({ id: z.string().min(1).max(40), label: z.string().trim().min(1).max(60), image: z.union([z.literal(""), url]).optional() })).max(12).optional(),
+  variants: z.array(z.object({ id: z.string().min(1).max(40), label: z.string().trim().min(1).max(60), image: z.union([z.literal(""), url]).optional(), description: z.string().trim().max(600).optional() })).max(12).optional(),
+  videos: z.array(url).max(4).optional(),
 });
 const categoryBase = z.object({ name: z.string().trim().min(2).max(80), section: z.enum(["restaurant", "huile"]), order: z.number().int().min(0).max(9999).optional(), image: z.union([z.literal(""), url]).optional() });
 const mediaBase = z.object({
@@ -59,7 +60,7 @@ export async function prepare(name: string, body: unknown, mode: "create" | "upd
       doc.price = pr.min; doc.priceMax = pr.max; delete doc.priceText;
       if (pr.max) doc.promoPrice = null;
     }
-    if (Array.isArray(doc.variants)) doc.variants = (doc.variants as { id: string; label: string; image?: string }[]).map((v) => ({ id: v.id, label: v.label, image: v.image || "" }));
+    if (Array.isArray(doc.variants)) doc.variants = (doc.variants as { id: string; label: string; image?: string; description?: string }[]).map((v) => ({ id: v.id, label: v.label, image: v.image || "", description: v.description || "" }));
     if ("categoryId" in doc) {
       if (doc.categoryId) {
         const id = oid(doc.categoryId);
@@ -69,7 +70,7 @@ export async function prepare(name: string, body: unknown, mode: "create" | "upd
       } else doc.categoryId = null;
     }
     if (typeof doc.promoPrice === "number" && typeof doc.price === "number" && doc.promoPrice >= doc.price) doc.promoPrice = null;
-    if (mode === "create") { doc.available = doc.available ?? true; doc.images = doc.images ?? []; doc.createdAt = new Date().toISOString(); }
+    if (mode === "create") { doc.available = doc.available ?? true; doc.images = doc.images ?? []; doc.videos = doc.videos ?? []; doc.createdAt = new Date().toISOString(); }
   }
   if (def.collection === "categories" && mode === "create") doc.order = doc.order ?? 0;
   if (def.collection === "media" && mode === "create") doc.createdAt = new Date().toISOString();

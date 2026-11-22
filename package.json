@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "check:env": "node scripts/check-env.mjs"
   },
   "dependencies": {
     "cloudinary": "^2.5.1",

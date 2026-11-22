@@ -10,7 +10,7 @@ const links = [
   ["/produits", "Boutique locale"], ["/contact", "Contact"],
 ];
 const drawerExtra = [["/a-propos", "À propos"]];
-export function SiteHeader({ name, user }: { name: string; user: { name: string; role: string } | null }) {
+export function SiteHeader({ name, user, unread = 0 }: { name: string; user: { name: string; role: string } | null; unread?: number }) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
   const { count } = useCart();
@@ -24,7 +24,7 @@ export function SiteHeader({ name, user }: { name: string; user: { name: string;
           {links.map(([h, l]) => <Link key={h} href={h} className={path === h ? "on" : ""}>{l}</Link>)}
         </nav>
         <div className="tools">
-          <Link href={acct} className="iconbtn desk" aria-label="Mon compte" title={user ? user.name : "Se connecter"}><User size={20} /></Link>
+          <Link href={acct} className="iconbtn desk" aria-label="Mon compte" title={user ? user.name : "Se connecter"}><User size={20} />{unread > 0 && <span className="count">{unread}</span>}</Link>
           <Link href="/panier" className="iconbtn desk" aria-label="Panier"><ShoppingBasket size={20} />{count > 0 && <span className="count">{count}</span>}</Link>
           <button className="iconbtn burger" aria-label="Menu" onClick={() => setOpen(!open)}>{open ? <X size={20} /> : <Menu size={20} />}</button>
         </div>
@@ -32,7 +32,7 @@ export function SiteHeader({ name, user }: { name: string; user: { name: string;
       {open && (
         <div className="drawer">
           {[...links, ...drawerExtra].map(([h, l]) => <Link key={h} href={h}>{l}</Link>)}
-          <Link href={acct}>{user ? "Mon compte" : "Connexion / Inscription"}</Link>
+          <Link href={acct}>{user ? `Mon compte${unread ? ` (${unread})` : ""}` : "Connexion / Inscription"}</Link>
           <Link href="/panier">Panier {count > 0 ? `(${count})` : ""}</Link>
         </div>
       )}

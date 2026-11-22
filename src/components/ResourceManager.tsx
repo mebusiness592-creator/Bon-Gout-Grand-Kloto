@@ -5,10 +5,10 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { ImageUploader } from "./ImageUploader";
 import { fcfa, priceLabel, productImage } from "@/lib/pricing";
 
-export type Field = { name: string; label: string; type: "text" | "textarea" | "number" | "bool" | "select" | "images" | "image" | "variants" | "media"; options?: { value: string; label: string }[]; required?: boolean; help?: string };
+export type Field = { name: string; label: string; type: "text" | "textarea" | "number" | "bool" | "select" | "images" | "videos" | "image" | "variants" | "media"; options?: { value: string; label: string }[]; required?: boolean; help?: string };
 export type Col = { key: string; label: string; type?: "text" | "money" | "bool" | "image" | "map" | "media" };
 type Item = Record<string, unknown> & { _id: string };
-type Variant = { id: string; label: string; image: string };
+type Variant = { id: string; label: string; image: string; description?: string };
 const newId = () => Math.random().toString(36).slice(2, 10);
 const isVideo = (u: string) => /\.(mp4|webm|mov)$/i.test(u);
 
@@ -26,7 +26,7 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
     const v: Record<string, unknown> = { ...defaults };
     for (const f of fields) {
       const cur = item ? item[f.name] : undefined;
-      if (f.type === "images") v[f.name] = Array.isArray(cur) ? cur : (item && typeof item.imageUrl === "string" && f.name === "images" ? [item.imageUrl] : []);
+      if (f.type === "images" || f.type === "videos") v[f.name] = Array.isArray(cur) ? cur : (item && typeof item.imageUrl === "string" && f.name === "images" ? [item.imageUrl] : []);
       else if (f.type === "variants") v[f.name] = Array.isArray(cur) ? cur : [];
       else if (f.type === "image") v[f.name] = typeof cur === "string" ? cur : "";
       else if (f.type === "bool") v[f.name] = cur === undefined ? (v[f.name] ?? (f.name === "available")) : Boolean(cur);
@@ -48,7 +48,7 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
       const v = form[f.name];
       if (f.type === "number") body[f.name] = v === "" || v === null || v === undefined ? (f.required ? 0 : null) : Number(v);
       else if (f.type === "select" && !f.required) body[f.name] = v === "" ? null : v;
-      else if (f.type === "variants") body[f.name] = ((v as Variant[]) || []).filter((x) => x.label.trim()).map((x) => ({ id: x.id, label: x.label.trim(), image: x.image || "" }));
+      else if (f.type === "variants") body[f.name] = ((v as Variant[]) || []).filter((x) => x.label.trim()).map((x) => ({ id: x.id, label: x.label.trim(), image: x.image || "", description: (x.description || "").trim() }));
       else if (f.type === "text" || f.type === "textarea") body[f.name] = typeof v === "string" ? v : "";
       else if (f.type !== "media") body[f.name] = v;
     }
@@ -119,6 +119,7 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
                   {f.type === "textarea" ? <textarea id={f.name} rows={3} value={String(form[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)} />
                     : f.type === "select" ? <select id={f.name} value={String(form[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)} required={f.required}>{!f.required && <option value="">—</option>}{f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
                     : f.type === "images" ? <ImageUploader value={(form[f.name] as string[]) || []} onChange={(v) => set(f.name, v)} max={8} />
+                    : f.type === "videos" ? <ImageUploader videoOnly max={4} value={(form[f.name] as string[]) || []} onChange={(v) => set(f.name, v)} />
                     : f.type === "image" ? <ImageUploader max={1} value={form[f.name] ? [String(form[f.name])] : []} onChange={(v) => set(f.name, v[0] || "")} />
                     : f.type === "media" ? <ImageUploader video max={30} value={(form.urls as string[]) || []} onChange={(v) => set("urls", v)} />
                     : f.type === "variants" ? (
@@ -126,10 +127,11 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
                         {((form[f.name] as Variant[]) || []).map((v, idx) => (
                           <div className="vrow" key={v.id}>
                             <div><input placeholder="Nom (ex. Sauce d'arachide)" value={v.label} maxLength={60} onChange={(e) => set(f.name, (form[f.name] as Variant[]).map((x, k) => k === idx ? { ...x, label: e.target.value } : x))} />
+                              <textarea rows={2} placeholder="Description de cette association (ingrédients, taille…)" maxLength={600} value={v.description || ""} onChange={(e) => set(f.name, (form[f.name] as Variant[]).map((x, k) => k === idx ? { ...x, description: e.target.value } : x))} style={{ margin: ".4rem 0" }} />
                               <ImageUploader max={1} value={v.image ? [v.image] : []} onChange={(u) => set(f.name, (form[f.name] as Variant[]).map((x, k) => k === idx ? { ...x, image: u[0] || "" } : x))} /></div>
                             <span /><button type="button" className="btn btn-sm btn-danger" onClick={() => set(f.name, (form[f.name] as Variant[]).filter((_, k) => k !== idx))}><Trash2 size={14} /></button>
                           </div>))}
-                        <button type="button" className="btn btn-sm btn-light" style={{ marginTop: ".5rem" }} onClick={() => set(f.name, [...((form[f.name] as Variant[]) || []), { id: newId(), label: "", image: "" }])}><Plus size={14} /> Ajouter une association</button>
+                        <button type="button" className="btn btn-sm btn-light" style={{ marginTop: ".5rem" }} onClick={() => set(f.name, [...((form[f.name] as Variant[]) || []), { id: newId(), label: "", image: "", description: "" }])}><Plus size={14} /> Ajouter une association</button>
                       </div>)
                     : <input id={f.name} type={f.type === "number" ? "number" : "text"} min={f.type === "number" ? 0 : undefined} step={f.type === "number" ? 1 : undefined} value={String(form[f.name] ?? "")} onChange={(e) => set(f.name, e.target.value)} required={f.required} />}
                   {f.help && <small className="muted">{f.help}</small>}</>}

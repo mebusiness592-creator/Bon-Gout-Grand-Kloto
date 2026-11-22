@@ -3,6 +3,7 @@ import { requireStaff } from "@/lib/adminPage";
 import { getDb, plain } from "@/lib/db";
 import { fcfa, fdate } from "@/lib/pricing";
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/lib/labels";
+import { StatusBadge } from "@/components/StatusBadge";
 import type { Order } from "@/lib/types";
 
 export default async function Dashboard() {
@@ -45,7 +46,7 @@ export default async function Dashboard() {
       <h3 style={{ marginTop: "1.4rem" }}>Dernières commandes</h3>
       <div className="scroll"><table className="tbl"><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Paiement</th><th>Date</th></tr></thead>
         <tbody>{lastOrders.length === 0 && <tr><td colSpan={6} className="muted">Aucune commande.</td></tr>}
-          {lastOrders.map((o) => <tr key={o._id}><td><Link href="/admin/commandes">{o.reference}</Link></td><td>{o.customerName}</td><td>{fcfa(o.total)}</td><td>{ORDER_STATUS[o.status] || o.status}</td><td>{PAYMENT_STATUS[o.paymentStatus] || o.paymentStatus}</td><td>{fdate(o.createdAt)}</td></tr>)}</tbody></table></div>
+          {lastOrders.map((o) => <tr key={o._id}><td><Link href="/admin/commandes">{o.reference}</Link></td><td>{o.customerName}</td><td>{fcfa(o.total)}</td><td><StatusBadge kind="order" value={o.status} /></td><td><StatusBadge kind="payment" value={o.paymentStatus} /></td><td>{fdate(o.createdAt)}</td></tr>)}</tbody></table></div>
     </div>
   );
 }

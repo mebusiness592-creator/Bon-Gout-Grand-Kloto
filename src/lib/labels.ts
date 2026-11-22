@@ -16,3 +16,9 @@ export const PLACEMENTS: Record<string, string> = {
   "accueil-restaurant": "Bannière du restaurant (défile toutes les 4,5 s)", restaurant: "Présentation du restaurant",
   "production-locale": "Bannière des produits locaux (défile toutes les 4,5 s)", galerie: "Galerie générale",
 };
+
+/** Couleur (tone) de chaque statut : un statut = une couleur distincte. */
+export const ORDER_TONE: Record<string, string> = { pending: "orange", confirmed: "blue", preparing: "violet", delivering: "indigo", delivered: "green", cancelled: "red" };
+export const PAYMENT_TONE: Record<string, string> = { pending: "gray", awaiting_verification: "amber", paid: "green", failed: "red", cancelled: "slate", cod: "blue", unpaid: "gray" };
+export const DELIVERY_TONE: Record<string, string> = { to_prepare: "orange", ready: "teal", awaiting_delivery: "amber", in_delivery: "indigo", delivered: "green", failed: "red" };
+export const TONE_COLOR: Record<string, string> = { orange: "#c2410c", blue: "#1d4ed8", violet: "#6d28d9", indigo: "#4338ca", green: "#15803d", red: "#b91c1c", amber: "#a16207", teal: "#0f766e", gray: "#64748b", slate: "#334155" };

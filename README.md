@@ -1,6 +1,6 @@
 # Bon Goût du Grand Kloto — plateforme restaurant + production locale
 
-Version 2.1 (phase 1 finalisée : fondations + administration + retouches). Next.js 15 · React 19 · TypeScript · MongoDB Atlas · Cloudinary.
+Version finale 3.0. Next.js 15 · React 19 · TypeScript · MongoDB Atlas · Cloudinary.
 
 ## Installation
 ```bash
@@ -26,6 +26,7 @@ Node.js 20 ou supérieur.
 Spécialités / catégories (avec image) → Restaurant (plats, galerie, associations) → Produits locaux (produits, conditionnements, stock) → Galerie (emplacements : bannière d'accueil, restaurant, production locale) → Paramètres (coordonnées, horaires, frais de livraison, modes de paiement).
 
 ## Ce qui est implémenté (phase 1)
+- Position GPS : le bouton remplit l'adresse automatiquement (service OpenStreetMap Nominatim, usage modéré ; si l'adresse n'est pas trouvée, le client complète à la main).
 - Site public : accueil, restaurant, menu par **spécialités** (catégories avec image) → page des plats de la spécialité → fiche du plat avec **associations à choisir** (ex. foufou + sauce d'arachide / sauce tomate, chacune avec sa photo), boutique de produits locaux organisée de la même façon (catégories avec image), à propos, contact, pages légales (textes de base à faire relire).
 - **Prix libre** : un prix (`1500`) ou une fourchette (`500-5000`) ; pour une fourchette, le client choisit son montant dans l'intervalle, vérifié côté serveur.
 - **Bannières** du restaurant et des produits locaux : diaporama automatique (4,5 s) alimenté par plusieurs images envoyées dans Admin > Galerie (emplacements « Bannière du restaurant » et « Bannière des produits locaux »).
@@ -41,8 +42,15 @@ Spécialités / catégories (avec image) → Restaurant (plats, galerie, associa
 ## Aperçu mobile dans Chrome
 F12 (ou Ctrl+Maj+I) → icône « appareil mobile » (Ctrl+Maj+M) → choisir un Pixel / iPhone. Pour tester sur un vrai téléphone : `npm run dev -- -H 0.0.0.0` puis ouvrir `http://IP-DE-VOTRE-PC:3000` (même Wi-Fi), ou utiliser l'URL de prévisualisation Vercel (HTTPS, nécessaire pour la géolocalisation).
 
-## Restant pour la phase 2 / à configurer
-- OneSignal (notifications push) : variables prévues, non branché.
+## Notifications, paiement, configuration
+- **Notifications dans l'application** : l'admin est prévenu d'une nouvelle commande, d'une inscription, d'un paiement annoncé par le client et d'un stock faible (≤ 3). Le client est prévenu à la réception de sa commande et à chaque changement de statut (commande, paiement, livraison).
+- **Push OneSignal** : variables `NEXT_PUBLIC_ONESIGNAL_APP_ID` + `ONESIGNAL_REST_API_KEY` (clé de l'**application**, `os_v2_app_…`). Dans OneSignal, déclarer le site en « Web » (URL en https) ; le fichier `public/OneSignalSDKWorker.js` est fourni. Le bouton « Activer les notifications » est dans Mon compte. Sur iPhone, le site doit d'abord être ajouté à l'écran d'accueil. Les appareils sont reliés aux comptes (external id = id utilisateur).
+- **USSD** : `npm run check:env` contrôle le format des codes (début `*`, fin `#`, variables `{amount}` / `{phone}`) et affiche un exemple ; seul un test réel avec un petit montant confirme que le code est le bon.
+- **Envoi des photos/vidéos** : direct navigateur → Cloudinary (signature du serveur) : Vercel ne reçoit jamais le fichier, donc pas de limite de 10 s ni de 4,5 Mo. Limites du site : images 10 Mo, vidéos 80 Mo (vérifiez la limite de votre offre Cloudinary).
+- **Statuts colorés** : commande, paiement et livraison ont chacun une couleur distincte.
+
+## Restant / à connaître
+- OneSignal : intégration prête, à tester avec vos clés d'application.
 - Réinitialisation du mot de passe **par e-mail** : non activée (aucun service e-mail). Un administrateur peut définir un mot de passe temporaire dans « Utilisateurs & rôles ».
 - Vérification automatique des paiements par les opérateurs : non incluse (confirmation manuelle par l'admin).
 - Les fichiers supprimés dans l'admin ne sont pas supprimés de Cloudinary.

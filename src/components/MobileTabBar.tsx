@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { Home, Utensils, Leaf, ShoppingBasket, User } from "lucide-react";
 import { useCart } from "./CartProvider";
 
-export function MobileTabBar({ accountHref }: { accountHref: string }) {
+export function MobileTabBar({ accountHref, unread = 0 }: { accountHref: string; unread?: number }) {
   const path = usePathname();
   const { count } = useCart();
   const items = [
@@ -15,7 +15,7 @@ export function MobileTabBar({ accountHref }: { accountHref: string }) {
   return (
     <nav className="tabbar" aria-label="Navigation mobile">
       {items.map(({ h, l, I }) => (
-        <Link key={h} href={h} className={on(h) ? "on" : ""}><I size={22} />{l}{h === "/panier" && count > 0 && <span className="count">{count}</span>}</Link>
+        <Link key={h} href={h} className={on(h) ? "on" : ""}><I size={22} />{l}{h === "/panier" && count > 0 && <span className="count">{count}</span>}{h === accountHref && unread > 0 && <span className="count">{unread}</span>}</Link>
       ))}
     </nav>
   );

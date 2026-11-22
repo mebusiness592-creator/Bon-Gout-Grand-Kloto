@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     });
     await createSession(res.insertedId.toString());
     await notify({ audience: "admin", title: "Nouvelle inscription", message: `${d.firstName} ${d.lastName} (${d.email})`, type: "user" });
+    await notify({ audience: "user", userId: res.insertedId.toString(), title: "Bienvenue !", message: "Votre compte est créé. Vous pouvez maintenant commander et suivre vos commandes ici.", type: "info" });
     return json({ ok: true, role: "customer" });
   } catch {
     return json({ error: "Inscription impossible pour le moment." }, 500);

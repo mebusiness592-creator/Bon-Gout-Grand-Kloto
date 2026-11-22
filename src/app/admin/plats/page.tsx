@@ -18,6 +18,7 @@ export default async function Page() {
     { name: "promoPrice", label: "Prix promotionnel (FCFA)", type: "number", help: "Laisser vide s'il n'y a pas de promotion." },
     { name: "categoryId", label: "Catégorie", type: "select", options: categories.map((c) => ({ value: c._id, label: c.name })) },
     { name: "images", label: "Galerie de photos du plat", type: "images" },
+    { name: "videos", label: "Vidéos du plat (facultatif)", type: "videos", help: "MP4, WebM ou MOV — 80 Mo maximum par vidéo." },
     { name: "variants", label: "Associations / options à choisir par le client (avec photo)", type: "variants", help: "Ex. : Foufou + sauce d'arachide, Foufou + sauce tomate. Le client choisit avant de commander." },
     { name: "available", label: "Disponible à la commande", type: "bool" },
     { name: "featured", label: "Mettre en avant (plat populaire)", type: "bool" },

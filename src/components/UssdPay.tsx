@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import { Phone } from "lucide-react";
+import { fcfa } from "@/lib/pricing";
 
-export function UssdPay({ id, token, code, instructions, status }: { id: string; token: string; code: string | null; instructions: string; status: string }) {
+export function UssdPay({ id, token, code, instructions, status, reference, amount }: { id: string; token: string; code: string | null; instructions: string; status: string; reference: string; amount: number }) {
   const [st, setSt] = useState(status);
   const [err, setErr] = useState("");
   async function declare() {
@@ -14,6 +15,7 @@ export function UssdPay({ id, token, code, instructions, status }: { id: string;
     <div className="panel" style={{ marginTop: "1rem" }}>
       <h3>Paiement mobile</h3>
       <p>{instructions}</p>
+      <p>Montant à payer : <strong>{fcfa(amount)}</strong> · Numéro de commande : <strong>{reference}</strong> <span className="muted">(à indiquer si on vous le demande)</span></p>
       {code ? (
         <>
           <p>Code à composer : <strong style={{ fontSize: "1.2rem" }}>{code}</strong></p>

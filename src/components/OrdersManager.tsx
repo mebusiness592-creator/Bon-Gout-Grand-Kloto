@@ -3,10 +3,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { fcfa, fdate } from "@/lib/pricing";
 import { DELIVERY_STATUS, ORDER_STATUS, PAYMENT_STATUS, SECTION_LABEL } from "@/lib/labels";
+import { DELIVERY_TONE, ORDER_TONE, PAYMENT_TONE, TONE_COLOR } from "@/lib/labels";
+import { StatusBadge } from "./StatusBadge";
 import type { Order } from "@/lib/types";
 
 type Mode = "orders" | "deliveries" | "payments";
-const payTone = (s: string) => s === "paid" ? "ok" : s === "awaiting_verification" ? "warn" : s === "failed" || s === "cancelled" ? "off" : "info";
 
 export function OrdersManager({ orders, mode }: { orders: Order[]; mode: Mode }) {
   const router = useRouter();
@@ -62,22 +63,22 @@ export function OrdersManager({ orders, mode }: { orders: Order[]; mode: Mode })
             {list.length === 0 && <tr><td colSpan={5} className="muted">Aucune commande.</td></tr>}
             {list.map((o) => (
               <tr key={o._id} className={sel === o._id ? "sel" : ""} style={{ cursor: "pointer" }} onClick={() => pick(o)}>
-                <td><strong>{o.reference}</strong><br /><small className="muted">{SECTION_LABEL[o.section] || o.section}</small><div className="mini">{o.items.slice(0, 3).map((i, k) => i.image ? <img key={k} src={i.image} alt="" /> : null)}</div></td>
+                <td style={{ borderLeft: `6px solid ${TONE_COLOR[(mode === "payments" ? PAYMENT_TONE[o.paymentStatus] : mode === "deliveries" ? DELIVERY_TONE[o.deliveryStatus || "to_prepare"] : ORDER_TONE[o.status]) || "gray"]}` }}><strong>{o.reference}</strong><br /><small className="muted">{SECTION_LABEL[o.section] || o.section}</small><div className="mini">{o.items.slice(0, 3).map((i, k) => i.image ? <img key={k} src={i.image} alt="" /> : null)}</div></td>
                 <td>{o.customerName}<br /><small className="muted">{o.phone}</small></td><td>{fcfa(o.total)}</td>
-                <td>{mode === "payments" ? <span className={`badge ${payTone(o.paymentStatus)}`}>{PAYMENT_STATUS[o.paymentStatus] || o.paymentStatus}</span>
-                  : mode === "deliveries" ? DELIVERY_STATUS[o.deliveryStatus || "to_prepare"] : <span className="pill">{ORDER_STATUS[o.status] || o.status}</span>}</td>
+                <td>{mode === "payments" ? <StatusBadge kind="payment" value={o.paymentStatus} /> : mode === "deliveries" ? <><StatusBadge kind="delivery" value={o.deliveryStatus} /><StatusBadge kind="order" value={o.status} /></> : <><StatusBadge kind="order" value={o.status} /><StatusBadge kind="payment" value={o.paymentStatus} /></>}</td>
                 <td>{fdate(o.createdAt)}</td></tr>))}
           </tbody></table></div>
         {current ? (
           <div className="panel">
             <h3>{current.reference}</h3>
+            <div><StatusBadge kind="order" value={current.status} /><StatusBadge kind="payment" value={current.paymentStatus} /><StatusBadge kind="delivery" value={current.deliveryStatus} /></div>
             <p style={{ margin: 0 }}><strong>{current.customerName}</strong> · <a href={`tel:${current.phone}`}>{current.phone}</a></p>
             <p className="muted" style={{ margin: ".2rem 0" }}>{current.address}{current.city ? `, ${current.city}` : ""}</p>
             {current.notes && <p><em>Note client : {current.notes}</em></p>}
             {current.items.map((i, k) => <div className="oline" key={k}>{i.image ? <img src={i.image} alt="" /> : <div className="ph">🍽️</div>}<span>{i.quantity} × {i.name}{i.variantLabel ? <><br /><small className="muted">{i.variantLabel}</small></> : null}</span><strong>{fcfa(i.quantity * i.unitPrice)}</strong></div>)}
             {typeof current.deliveryFee === "number" && <div className="total"><span>Livraison</span><span>{fcfa(current.deliveryFee)}</span></div>}
             <div className="total big"><span>Total</span><span>{fcfa(current.total)}</span></div>
-            <p>Paiement : <strong>{current.paymentMethod === "ussd" ? `Mobile money ${current.operator || ""}` : "À la livraison"}</strong> <span className={`badge ${payTone(current.paymentStatus)}`}>{PAYMENT_STATUS[current.paymentStatus] || current.paymentStatus}</span></p>
+            <p>Paiement : <strong>{current.paymentMethod === "ussd" ? `Mobile money ${current.operator || ""}` : "À la livraison"}</strong> </p>
             {loc && (mode !== "orders") && <>
               <iframe className="map" title="Carte" loading="lazy" src={`https://www.openstreetmap.org/export/embed.html?bbox=${loc.longitude - 0.01}%2C${loc.latitude - 0.01}%2C${loc.longitude + 0.01}%2C${loc.latitude + 0.01}&layer=mapnik&marker=${loc.latitude}%2C${loc.longitude}`} />
               <p><a className="btn btn-leaf btn-sm" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${loc.latitude},${loc.longitude}`}>Itinéraire</a>{" "}

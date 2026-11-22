@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb, plain } from "@/lib/db";
+import { StatusBadge } from "@/components/StatusBadge";
+import { UserNotifications } from "@/components/UserNotifications";
 import { AccountForm } from "@/components/AccountForm";
 import { fcfa, fdate } from "@/lib/pricing";
 import { DELIVERY_STATUS, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/labels";
@@ -17,7 +19,7 @@ export default async function Account() {
     db.collection("notifications").find({ audience: "user", userId: user.id }).sort({ createdAt: -1 }).limit(10).toArray(),
   ]);
   const os: Order[] = plain(orders);
-  const ns: { _id: string; title: string; message: string; createdAt: string }[] = plain(notes);
+  const ns: { _id: string; title: string; message: string; createdAt: string; read?: boolean }[] = plain(notes);
   return (
     <div className="container section">
       <h1>Bonjour {user.firstName}</h1>
@@ -31,9 +33,9 @@ export default async function Account() {
                 <div className="total"><strong>{o.reference}</strong><strong>{fcfa(o.total)}</strong></div>
                 <div className="muted" style={{ fontSize: ".85rem" }}>{fdate(o.createdAt)}</div>
                 <div className="mini">{o.items.slice(0, 5).map((i, k) => i.image ? <img key={k} src={i.image} alt={i.name} title={i.name} /> : null)}</div>
-                <p style={{ margin: ".4rem 0 0" }}><span className="pill">{ORDER_STATUS[o.status] || o.status}</span> <span className="pill">{PAYMENT_STATUS[o.paymentStatus] || o.paymentStatus}</span> <span className="pill">{DELIVERY_STATUS[o.deliveryStatus || "to_prepare"]}</span></p>
+                <p style={{ margin: ".4rem 0 0" }}><StatusBadge kind="order" value={o.status} /><StatusBadge kind="payment" value={o.paymentStatus} /><StatusBadge kind="delivery" value={o.deliveryStatus} /></p>
               </Link>))}
-          {ns.length > 0 && <><h2 style={{ fontSize: "1.4rem", marginTop: "1.5rem" }}>Notifications</h2>{ns.map((n) => <div key={n._id} className="panel" style={{ marginBottom: ".6rem" }}><strong>{n.title}</strong><div className="muted" style={{ fontSize: ".9rem" }}>{n.message} · {fdate(n.createdAt)}</div></div>)}</>}
+          <UserNotifications items={ns} />
         </div>
         <AccountForm user={{ ...user, address: user.address || "", city: user.city || "" }} />
       </div>

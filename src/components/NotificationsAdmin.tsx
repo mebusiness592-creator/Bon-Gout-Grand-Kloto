@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { fdate } from "@/lib/pricing";
+import { PushButton } from "./PushButton";
 
 type N = { _id: string; title: string; message: string; read: boolean; createdAt: string; orderId?: string | null; type?: string };
 export function NotificationsAdmin({ items }: { items: N[] }) {
@@ -16,6 +17,7 @@ export function NotificationsAdmin({ items }: { items: N[] }) {
         <h1 style={{ fontSize: "1.7rem", margin: 0 }}>Notifications</h1>
         <button className="btn btn-light btn-sm" onClick={() => mark({ all: true })}>Tout marquer comme lu</button>
       </div>
+      <PushButton />
       <div style={{ marginTop: "1rem", display: "grid", gap: ".6rem" }}>
         {items.length === 0 && <div className="panel muted">Aucune notification.</div>}
         {items.map((n) => (

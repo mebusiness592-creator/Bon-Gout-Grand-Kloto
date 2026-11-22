@@ -32,6 +32,7 @@ export function ProductOrder({ p }: { p: Product }) {
       <div>
         <div className="detail-img">{main ? <img src={main} alt={p.name} /> : <div className="ph" style={{ fontSize: "5rem" }}>{p.section === "restaurant" ? "🍛" : "🌴"}</div>}</div>
         {gallery.length > 1 && <div className="thumbs">{gallery.map((u) => <img key={u} src={u} alt="" loading="lazy" style={{ cursor: "pointer" }} onClick={() => setShown(u)} />)}</div>}
+        {(p.videos?.length ?? 0) > 0 && <div style={{ display: "grid", gap: ".6rem", marginTop: ".8rem" }}>{p.videos?.map((u) => <video key={u} src={u} controls preload="metadata" playsInline style={{ width: "100%", borderRadius: 14 }} />)}</div>}
       </div>
       <div>
         <h1>{p.name}</h1>
@@ -44,6 +45,7 @@ export function ProductOrder({ p }: { p: Product }) {
           <div className="opts">{variants.map((v) => (
             <button type="button" key={v.id} className={`opt ${v.id === vid ? "on" : ""}`} onClick={() => { setVid(v.id); setShown(undefined); }}>
               {v.image ? <img src={v.image} alt={v.label} loading="lazy" /> : <div className="ph">🍽️</div>}<span>{v.label}</span></button>))}</div></>}
+        {variant?.description && <div className="panel" style={{ marginBottom: "1rem", padding: ".9rem 1rem" }}><strong>{variant.label}</strong><p className="muted" style={{ margin: ".3rem 0 0", whiteSpace: "pre-line" }}>{variant.description}</p></div>}
         {range && <><label htmlFor="amt">Votre montant (FCFA) — entre {fcfa(p.price)} et {fcfa(p.priceMax as number)}</label>
           <input id="amt" type="number" inputMode="numeric" min={p.price} max={p.priceMax as number} step={50} value={amount} onChange={(e) => setAmount(e.target.value)} /></>}
         {msg && <div className="err" role="alert">{msg}</div>}

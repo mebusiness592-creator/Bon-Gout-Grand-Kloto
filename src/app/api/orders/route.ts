@@ -104,7 +104,10 @@ export async function POST(req: NextRequest) {
     };
     const res = await db.collection("orders").insertOne(order);
     const id = res.insertedId.toString();
-    await notify({ audience: "admin", title: "Nouvelle commande", message: `Commande ${order.reference} – ${order.customerName}`, orderId: id, type: "order" });
+    if (settings.notifyNewOrders) await notify({ audience: "admin", title: "Nouvelle commande", message: `Commande ${order.reference} – ${order.customerName}`, orderId: id, type: "order" });
+    for (const p of products) {
+      if (typeof p.stock === "number" && p.stock - (qtyByProduct.get(p._id.toString()) as number) <= 3) await notify({ audience: "admin", title: "Stock faible", message: `« ${p.name} » : il reste ${Math.max(0, p.stock - (qtyByProduct.get(p._id.toString()) as number))} en stock.`, type: "stock" });
+    }
     if (user) await notify({ audience: "user", userId: user.id, title: "Commande reçue", message: `Votre commande ${order.reference} a bien été enregistrée.`, orderId: id, type: "order" });
     return json({ id, reference: order.reference, token: order.accessToken });
   } catch {
