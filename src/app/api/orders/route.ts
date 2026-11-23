@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       city: data.city || "", notes: data.notes || "", section, items, subtotal, deliveryFee, total: subtotal + deliveryFee,
       paymentMethod: data.paymentMethod, operator: data.paymentMethod === "ussd" ? data.operator : null,
       location: data.location || null, status: "pending", paymentStatus: data.paymentMethod === "ussd" ? "pending" : "cod",
-      deliveryStatus: "to_prepare", history: [], createdAt: new Date().toISOString(),
+      deliveryStatus: "to_prepare", history: [], createdAt: new Date().toISOString(), createdAtDate: new Date(),
     };
     const res = await db.collection("orders").insertOne(order);
     const id = res.insertedId.toString();

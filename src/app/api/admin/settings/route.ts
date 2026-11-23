@@ -5,7 +5,7 @@ import { guard, json } from "@/lib/guard";
 
 const s = (n: number) => z.string().trim().max(n);
 const schema = z.object({
-  name: s(100).min(2), tagline: s(200), phone: s(30), whatsapp: s(30), email: z.union([z.literal(""), z.string().trim().email().max(120)]),
+  name: s(100).min(2), tagline: s(200), phone: s(30), whatsapp: s(30), whatsappLink: z.union([z.literal(""), z.string().trim().url().max(600)]), email: z.union([z.literal(""), z.string().trim().email().max(120)]),
   address: s(300), hours: s(300), deliveryFee: z.number().int().min(0).max(1_000_000), freeDeliveryFrom: z.number().int().min(0).max(100_000_000),
   deliveryNote: s(300), allowCod: z.boolean(), allowUssd: z.boolean(), paymentInstructions: s(800),
   facebook: s(300), instagram: s(300), tiktok: s(300), youtube: s(300), telegram: s(300), x: s(300), linkedin: s(300), notifyNewOrders: z.boolean(),

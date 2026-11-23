@@ -24,7 +24,7 @@ export function SiteHeader({ name, user, unread = 0, notes = [] }: { name: strin
         <div className="tools">
           {staff && <Link href="/admin" className="iconbtn" aria-label="Administration" title="Administration"><ShieldCheck size={20} /></Link>}
           {user && <NotificationBell items={notes} unread={unread} />}
-          <Link href={user ? "/mon-compte" : "/connexion"} className="iconbtn desk" aria-label="Mon compte" title={user ? user.name : "Se connecter"}>{user?.avatar ? <Avatar src={user.avatar} name={user.name} size={34} /> : <User size={20} />}</Link>
+          <Link href={user ? "/mon-compte" : "/connexion"} className="iconbtn profile-shortcut" aria-label="Mon compte" title={user ? user.name : "Se connecter"}>{user?.avatar ? <Avatar src={user.avatar} name={user.name} size={34} /> : <User size={20} />}</Link>
           <Link href="/panier" className="iconbtn desk" aria-label="Panier"><ShoppingBasket size={20} />{count > 0 && <span className="count">{count}</span>}</Link>
         </div>
       </div>

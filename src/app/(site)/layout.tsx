@@ -11,11 +11,11 @@ export const dynamic = "force-dynamic";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [user, s] = await Promise.all([getCurrentUser(), getSettings()]);
+  await purgeOldNotifications();
   let unread = 0;
   let notes: { _id: string; title: string; message: string; createdAt: string; read?: boolean }[] = [];
   if (user) {
     try {
-      await purgeOldNotifications();
       const col = (await getDb()).collection("notifications");
       const [c, list] = await Promise.all([
         col.countDocuments({ audience: "user", userId: user.id, read: false }),

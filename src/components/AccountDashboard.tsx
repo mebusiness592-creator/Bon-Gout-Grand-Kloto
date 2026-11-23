@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Lock, LogOut, Package, ShieldCheck, Trash2, User } from "lucide-react";
+import { Bell, Lock, LogOut, Package, ShieldCheck, User } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { ImageUploader } from "./ImageUploader";
 import { PasswordInput } from "./PasswordInput";
@@ -33,11 +33,7 @@ export function AccountDashboard({ user, orders, notes, unread }: { user: U; ord
     if (r.ok) { setMsg(ok); router.refresh(); return true; }
     setErr(d.error || "Enregistrement impossible."); return false;
   }
-  async function hide(o: Order) {
-    if (!confirm("Supprimer cette commande de votre historique ?")) return;
-    const r = await fetch(`/api/account/orders/${o._id}`, { method: "DELETE" });
-    if (r.ok) router.refresh(); else alert((await r.json().catch(() => ({}))).error || "Suppression impossible.");
-  }
+
   async function logout() { await fetch("/api/auth/logout", { method: "POST" }); window.location.href = "/"; }
   const tabs: [Tab, string, React.ReactNode][] = [
     ["orders", "Mes commandes", <Package key="o" size={18} />], ["profile", "Mon profil", <User key="p" size={18} />],
@@ -68,9 +64,6 @@ export function AccountDashboard({ user, orders, notes, unread }: { user: U; ord
                 </Link>
                 <div style={{ marginTop: ".5rem", display: "flex", gap: ".5rem", flexWrap: "wrap", alignItems: "center" }}>
                   <Link href={`/commande/${o._id}`} className="btn btn-light btn-sm">Voir le détail</Link>
-                  {["delivered", "cancelled"].includes(o.status)
-                    ? <button className="btn btn-danger btn-sm" onClick={() => hide(o)}><Trash2 size={14} /> Supprimer</button>
-                    : <small className="muted">Suppression possible une fois la commande livrée ou annulée.</small>}
                 </div>
               </div>))}
           </div>)}

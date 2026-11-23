@@ -58,22 +58,3 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   return json({ ok: true });
 }
 
-/** Suppression définitive d'une commande (administrateur uniquement). Remet le stock si la commande était encore active. */
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const g = await guard(req, ["admin"]);
-  if ("error" in g) return g.error;
-  const _id = oid((await ctx.params).id);
-  if (!_id) return json({ error: "Requête invalide." }, 400);
-  const db = await getDb();
-  const order = await db.collection("orders").findOne({ _id });
-  if (!order) return json({ error: "Commande introuvable." }, 404);
-  if (!["delivered", "cancelled"].includes(order.status)) {
-    for (const it of (order.items || []) as { productId: string; quantity: number }[]) {
-      const pid = oid(it.productId);
-      if (pid) await db.collection("products").updateOne({ _id: pid, stock: { $type: "number" } }, { $inc: { stock: it.quantity } });
-    }
-  }
-  await db.collection("orders").deleteOne({ _id });
-  await db.collection("notifications").deleteMany({ orderId: _id.toString() });
-  return json({ ok: true });
-}

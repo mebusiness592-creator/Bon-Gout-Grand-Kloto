@@ -8,7 +8,7 @@ export function SiteFooter({ s }: { s: Settings }) {
     { label: "Instagram", href: s.instagram, Icon: Instagram },
     { label: "TikTok", href: s.tiktok, Icon: Music2 },
     { label: "YouTube", href: s.youtube, Icon: Youtube },
-    { label: "WhatsApp", href: s.whatsapp ? `https://wa.me/${s.whatsapp.replace(/\D/g, "")}` : "", Icon: MessageCircle },
+    { label: "WhatsApp", href: s.whatsappLink || (s.whatsapp ? `https://wa.me/${s.whatsapp.replace(/\D/g, "")}` : ""), Icon: MessageCircle },
     { label: "Telegram", href: s.telegram, Icon: Send },
     { label: "X", href: s.x, Icon: Twitter },
     { label: "LinkedIn", href: s.linkedin, Icon: Linkedin },

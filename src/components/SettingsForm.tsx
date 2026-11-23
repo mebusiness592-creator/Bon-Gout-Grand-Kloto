@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import type { Settings } from "@/lib/settings";
 
 const text: [keyof Settings, string][] = [
-  ["name", "Nom du restaurant"], ["tagline", "Slogan"], ["phone", "Téléphone"], ["whatsapp", "WhatsApp (avec indicatif)"], ["email", "E-mail de contact"],
+  ["name", "Nom du restaurant"], ["tagline", "Slogan"], ["phone", "Téléphone"], ["whatsapp", "Numéro WhatsApp (avec indicatif, ex. +228...)"], ["whatsappLink", "Lien WhatsApp direct (facultatif)"], ["email", "E-mail de contact"],
   ["address", "Adresse"], ["hours", "Horaires d'ouverture"],
   ["facebook", "Lien Facebook"], ["instagram", "Lien Instagram"], ["tiktok", "Lien TikTok"],
   ["youtube", "Lien de la chaîne YouTube"], ["telegram", "Lien Telegram"], ["x", "Lien X (Twitter)"], ["linkedin", "Lien LinkedIn"],

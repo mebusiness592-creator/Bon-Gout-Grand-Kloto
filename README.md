@@ -68,3 +68,11 @@ Importer le dépôt, ajouter les variables d'environnement ci-dessus (ne pas éc
 
 ## Compatibilité avec la première version
 Collections conservées : `products` (sections `restaurant` / `huile`, ancien champ `imageUrl` toujours lu ; nouveaux champs `priceMax`, `variants`), `categories` (champ `image` ajouté), `orders`, `notifications`. Les anciennes notifications (sans champ `audience`) restent visibles côté admin.
+
+
+## Rétention automatique des commandes et historiques
+
+- Les commandes sont supprimées automatiquement après 5 jours. Les nouvelles commandes utilisent un champ date BSON avec un index TTL MongoDB ; les anciennes commandes sont également nettoyées par la tâche de maintenance.
+- Les entrées de l'historique des actions d'une commande et les notifications sont supprimées lorsqu'elles dépassent 2 jours.
+- Vercel exécute `/api/maintenance/cleanup` chaque nuit. Définir `CRON_SECRET` dans les variables d'environnement Vercel (et dans `.env.local` en local) avec une valeur aléatoire secrète. Le nettoyage est aussi déclenché lors des visites du site et de l'administration.
+- Les commandes ne peuvent plus être supprimées individuellement depuis le compte client ou l'administration : la suppression est commune et automatique.
