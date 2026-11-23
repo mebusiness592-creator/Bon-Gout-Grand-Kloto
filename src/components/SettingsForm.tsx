@@ -5,7 +5,9 @@ import type { Settings } from "@/lib/settings";
 
 const text: [keyof Settings, string][] = [
   ["name", "Nom du restaurant"], ["tagline", "Slogan"], ["phone", "Téléphone"], ["whatsapp", "WhatsApp (avec indicatif)"], ["email", "E-mail de contact"],
-  ["address", "Adresse"], ["hours", "Horaires d'ouverture"], ["facebook", "Lien Facebook"], ["instagram", "Lien Instagram"], ["tiktok", "Lien TikTok"],
+  ["address", "Adresse"], ["hours", "Horaires d'ouverture"],
+  ["facebook", "Lien Facebook"], ["instagram", "Lien Instagram"], ["tiktok", "Lien TikTok"],
+  ["youtube", "Lien de la chaîne YouTube"], ["telegram", "Lien Telegram"], ["x", "Lien X (Twitter)"], ["linkedin", "Lien LinkedIn"],
 ];
 export function SettingsForm({ initial }: { initial: Settings }) {
   const router = useRouter();
@@ -22,7 +24,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
     <form className="panel" onSubmit={save} style={{ maxWidth: 760 }}>
       <h1 style={{ fontSize: "1.7rem" }}>Paramètres</h1>
       {msg && <div className="okmsg">{msg}</div>}{err && <div className="err">{err}</div>}
-      <div className="row2">{text.map(([k, l]) => <div key={k}><label>{l}</label><input value={String(s[k])} onChange={(e) => setS({ ...s, [k]: e.target.value })} /></div>)}</div>
+      <h3 style={{ marginTop: "1.4rem" }}>Informations et réseaux sociaux</h3><div className="row2">{text.map(([k, l]) => <div key={k}><label>{l}</label><input value={String(s[k])} onChange={(e) => setS({ ...s, [k]: e.target.value })} /></div>)}</div>
       <h3 style={{ marginTop: "1.4rem" }}>Livraison</h3>
       <div className="row2"><div><label>Frais de livraison (FCFA)</label><input type="number" min={0} value={s.deliveryFee} onChange={(e) => setS({ ...s, deliveryFee: Number(e.target.value) })} /></div>
         <div><label>Livraison offerte dès (FCFA, 0 = jamais)</label><input type="number" min={0} value={s.freeDeliveryFrom} onChange={(e) => setS({ ...s, freeDeliveryFrom: Number(e.target.value) })} /></div></div>

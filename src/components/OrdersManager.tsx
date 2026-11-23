@@ -15,6 +15,8 @@ export function OrdersManager({ orders, mode, canDelete = false }: { orders: Ord
   const [sel, setSel] = useState<string | null>(null);
   const [vals, setVals] = useState<Record<string, string>>({});
   const [note, setNote] = useState(""); const [msg, setMsg] = useState(""); const [busy, setBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [rowError, setRowError] = useState("");
 
   const list = orders.filter((o) => {
     if (mode === "deliveries" && (["delivered", "cancelled"].includes(o.status) || o.deliveryStatus === "delivered")) return false;
@@ -40,10 +42,18 @@ export function OrdersManager({ orders, mode, canDelete = false }: { orders: Ord
     if (!r.ok) return setMsg(d.error || "Mise à jour impossible.");
     setMsg("Mise à jour enregistrée."); setVals({}); setNote(""); router.refresh();
   }
-  async function remove() {
-    if (!current || !confirm(`Supprimer définitivement la commande ${current.reference} ?`)) return;
-    const r = await fetch(`/api/admin/orders/${current.reference ? current._id : ""}`, { method: "DELETE" });
-    if (r.ok) { setSel(null); router.refresh(); } else setMsg((await r.json().catch(() => ({}))).error || "Suppression impossible.");
+  async function remove(order: Order) {
+    if (!confirm(`Supprimer définitivement la commande ${order.reference} ?`)) return;
+    setDeletingId(order._id); setRowError("");
+    const r = await fetch(`/api/admin/orders/${order._id}`, { method: "DELETE" });
+    const d = await r.json().catch(() => ({}));
+    setDeletingId(null);
+    if (r.ok) {
+      if (sel === order._id) setSel(null);
+      router.refresh();
+    } else {
+      setRowError(d.error || `Suppression de ${order.reference} impossible.`);
+    }
   }
   const loc = current?.location;
   const sels: [string, string, Record<string, string>, string][] = [
@@ -62,16 +72,24 @@ export function OrdersManager({ orders, mode, canDelete = false }: { orders: Ord
         <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Statut"><option value="">Tous les statuts</option>{Object.entries(statusOpts).map(([k, v]) => k !== "unpaid" && <option key={k} value={k}>{v}</option>)}</select>
         <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Type"><option value="">Tous les types</option>{Object.entries(SECTION_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
       </div>
+      {rowError && <div className="err" role="alert">{rowError}</div>}
       <div className="detailgrid">
-        <div className="scroll"><table className="tbl"><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>{mode === "payments" ? "Paiement" : mode === "deliveries" ? "Livraison" : "Statut"}</th><th>Date</th></tr></thead>
+        <div className="scroll"><table className="tbl"><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>{mode === "payments" ? "Paiement" : mode === "deliveries" ? "Livraison" : "Statut"}</th><th>Date</th>{canDelete && <th>Action</th>}</tr></thead>
           <tbody>
-            {list.length === 0 && <tr><td colSpan={5} className="muted">Aucune commande.</td></tr>}
+            {list.length === 0 && <tr><td colSpan={canDelete ? 6 : 5} className="muted">Aucune commande.</td></tr>}
             {list.map((o) => (
               <tr key={o._id} className={sel === o._id ? "sel" : ""} style={{ cursor: "pointer" }} onClick={() => pick(o)}>
                 <td style={{ borderLeft: `6px solid ${TONE_COLOR[(mode === "payments" ? PAYMENT_TONE[o.paymentStatus] : mode === "deliveries" ? DELIVERY_TONE[o.deliveryStatus || "to_prepare"] : ORDER_TONE[o.status]) || "gray"]}` }}><strong>{o.reference}</strong><br /><small className="muted">{SECTION_LABEL[o.section] || o.section}</small><div className="mini">{o.items.slice(0, 3).map((i, k) => i.image ? <img key={k} src={i.image} alt="" /> : null)}</div></td>
                 <td>{o.customerName}<br /><small className="muted">{o.phone}</small></td><td>{fcfa(o.total)}</td>
                 <td>{mode === "payments" ? <StatusBadge kind="payment" value={o.paymentStatus} /> : mode === "deliveries" ? <><StatusBadge kind="delivery" value={o.deliveryStatus} /><StatusBadge kind="order" value={o.status} /></> : <><StatusBadge kind="order" value={o.status} /><StatusBadge kind="payment" value={o.paymentStatus} /></>}</td>
-                <td>{fdate(o.createdAt)}</td></tr>))}
+                <td>{fdate(o.createdAt)}</td>
+                {canDelete && <td>
+                  <button type="button" className="btn btn-danger btn-sm" disabled={deletingId === o._id}
+                    onClick={(e) => { e.stopPropagation(); void remove(o); }}>
+                    {deletingId === o._id ? "Suppression…" : "Supprimer"}
+                  </button>
+                </td>}
+              </tr>))}
           </tbody></table></div>
         {current ? (
           <div className="panel">
@@ -101,7 +119,6 @@ export function OrdersManager({ orders, mode, canDelete = false }: { orders: Ord
                 <button className="btn btn-leaf btn-sm" disabled={busy} onClick={() => save({ paymentStatus: "paid" })}>Confirmer le paiement</button>
                 <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => save({ paymentStatus: "failed" })}>Refuser</button></>}
             </div>
-            {canDelete && <p style={{ marginTop: "1rem" }}><button className="btn btn-danger btn-sm" onClick={remove}>Supprimer cette commande</button></p>}
             {(current.history?.length ?? 0) > 0 && <><h3 style={{ marginTop: "1.2rem", fontSize: "1rem" }}>Historique</h3>
               {[...(current.history || [])].reverse().map((h, i) => <div key={i} className="muted" style={{ fontSize: ".8rem" }}>{fdate(h.at)} · {h.by} · {h.field === "note" ? `note : ${h.to}` : `${h.field} → ${(PAYMENT_STATUS[h.to] || ORDER_STATUS[h.to] || DELIVERY_STATUS[h.to] || h.to)}`}{h.note && h.field !== "note" ? ` (${h.note})` : ""}</div>)}</>}
           </div>

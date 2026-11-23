@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Bell, Trash2, X } from "lucide-react";
 import { fdate } from "@/lib/pricing";
@@ -34,6 +35,8 @@ export function NotifPanel({ items }: { items: Notif[] }) {
 export function NotificationBell({ items, unread }: { items: Notif[]; unread: number }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   async function show() {
     setOpen(true);
     if (unread > 0) { await fetch("/api/account/notifications", { method: "PATCH" }); router.refresh(); }
@@ -41,13 +44,18 @@ export function NotificationBell({ items, unread }: { items: Notif[]; unread: nu
   return (
     <>
       <button className="iconbtn" aria-label="Notifications" onClick={show}><Bell size={20} />{unread > 0 && <span className="count">{unread}</span>}</button>
-      {open && (
-        <div className="modal" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
+      {mounted && open && createPortal(
+        <div className="modal notification-modal" role="dialog" aria-modal="true" aria-label="Notifications" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
           <div className="box">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><h2 style={{ fontSize: "1.3rem", margin: 0 }}>Notifications</h2><button className="xbtn" aria-label="Fermer" onClick={() => setOpen(false)}><X size={20} /></button></div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+              <h2 style={{ fontSize: "1.3rem", margin: 0 }}>Notifications</h2>
+              <button className="xbtn" aria-label="Fermer" onClick={() => setOpen(false)}><X size={20} /></button>
+            </div>
             <NotifPanel items={items.map((n) => ({ ...n, read: true }))} />
           </div>
-        </div>)}
+        </div>,
+        document.body
+      )}
     </>
   );
 }
