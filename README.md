@@ -1,6 +1,6 @@
 # Bon Goût du Grand Kloto — plateforme restaurant + production locale
 
-Version finale 3.0. Next.js 15 · React 19 · TypeScript · MongoDB Atlas · Cloudinary.
+Version finale 3.1. Next.js 15 · React 19 · TypeScript · MongoDB Atlas · Cloudinary.
 
 ## Installation
 ```bash
@@ -48,6 +48,13 @@ F12 (ou Ctrl+Maj+I) → icône « appareil mobile » (Ctrl+Maj+M) → choisir un
 - **USSD** : `npm run check:env` contrôle le format des codes (début `*`, fin `#`, variables `{amount}` / `{phone}`) et affiche un exemple ; seul un test réel avec un petit montant confirme que le code est le bon.
 - **Envoi des photos/vidéos** : direct navigateur → Cloudinary (signature du serveur) : Vercel ne reçoit jamais le fichier, donc pas de limite de 10 s ni de 4,5 Mo. Limites du site : images 10 Mo, vidéos 80 Mo (vérifiez la limite de votre offre Cloudinary).
 - **Statuts colorés** : commande, paiement et livraison ont chacun une couleur distincte.
+
+## Compte, notifications, suppressions (3.1)
+- Mon compte : menus Commandes / Profil (photo envoyée vers Cloudinary) / Mot de passe / Notifications ; cloche avec historique en haut du site.
+- Les notifications (admin et clients) sont supprimées automatiquement après 2 jours ; chacun peut aussi supprimer ses messages.
+- Suppression de commande : l'administrateur supprime définitivement ; le client retire une commande livrée ou annulée de son historique (elle reste visible pour le restaurant).
+- Un compte administrateur garde l'accès à son espace client (« Mon compte ») ; le rôle ne se change pas soi-même (protection) : modifier le rôle dans Utilisateurs & rôles par un autre admin ou dans MongoDB Atlas.
+- Le mot de passe oublié par e-mail n'est pas encore activé (en attente du choix du service d'envoi).
 
 ## Restant / à connaître
 - OneSignal : intégration prête, à tester avec vos clés d'application.

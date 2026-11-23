@@ -1,10 +1,12 @@
 import { getDb } from "./db";
 import { sendPush } from "./push";
+import { purgeOldNotifications } from "./purge";
 
 /** Notification dans l'application + push OneSignal si configuré. */
 export async function notify(n: { audience: "admin" | "user"; userId?: string | null; title: string; message: string; orderId?: string; type?: string }) {
   try {
     const db = await getDb();
+    await purgeOldNotifications();
     await db.collection("notifications").insertOne({
       audience: n.audience, userId: n.userId || null, title: n.title, message: n.message,
       orderId: n.orderId || null, type: n.type || "info", read: false, createdAt: new Date().toISOString(),

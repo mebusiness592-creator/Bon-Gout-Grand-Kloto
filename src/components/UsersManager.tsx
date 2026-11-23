@@ -2,8 +2,9 @@
 import { useRouter } from "next/navigation";
 import { ROLE_LABEL } from "@/lib/labels";
 import { fdate } from "@/lib/pricing";
+import { Avatar } from "./Avatar";
 
-type U = { _id: string; firstName: string; lastName: string; email: string; phone: string; role: string; active?: boolean; createdAt?: string };
+type U = { avatar?: string; _id: string; firstName: string; lastName: string; email: string; phone: string; role: string; active?: boolean; createdAt?: string };
 export function UsersManager({ users, meId }: { users: U[]; meId: string }) {
   const router = useRouter();
   async function patch(id: string, body: Record<string, unknown>) {
@@ -21,7 +22,7 @@ export function UsersManager({ users, meId }: { users: U[]; meId: string }) {
       <p className="muted">Les rôles sont enregistrés en base et relus à chaque requête. Un utilisateur ne peut pas modifier son propre rôle.</p>
       <div className="scroll"><table className="tbl"><thead><tr><th>Nom</th><th>Contact</th><th>Rôle</th><th>Statut</th><th>Inscrit le</th><th /></tr></thead>
         <tbody>{users.map((u) => (
-          <tr key={u._id}><td>{u.firstName} {u.lastName}</td><td>{u.email}<br /><small className="muted">{u.phone}</small></td>
+          <tr key={u._id}><td><span style={{ display: "inline-flex", alignItems: "center", gap: ".5rem" }}><Avatar src={u.avatar} name={`${u.firstName} ${u.lastName}`} size={36} />{u.firstName} {u.lastName}</span></td><td>{u.email}<br /><small className="muted">{u.phone}</small></td>
             <td><select value={u.role} disabled={u._id === meId} onChange={(e) => patch(u._id, { role: e.target.value })}>{Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
             <td><span className={`badge ${u.active === false ? "off" : "ok"}`}>{u.active === false ? "Désactivé" : "Actif"}</span></td>
             <td>{fdate(u.createdAt)}</td>

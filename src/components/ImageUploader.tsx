@@ -20,7 +20,7 @@ function xhrUpload(url: string, fd: FormData, onP: (n: number) => void): Promise
 }
 
 /** Envoi direct navigateur → Cloudinary (signature fournie par le serveur) : les fichiers ne transitent pas par Vercel. */
-export function ImageUploader({ value, onChange, max = 6, video = false, videoOnly = false, onUploaded }: { value: string[]; onChange: (v: string[]) => void; max?: number; video?: boolean; videoOnly?: boolean; onUploaded?: (r: { url: string; kind: "image" | "video" }) => void }) {
+export function ImageUploader({ value, onChange, max = 6, video = false, videoOnly = false, onUploaded, signUrl = "/api/admin/upload" }: { value: string[]; onChange: (v: string[]) => void; max?: number; video?: boolean; videoOnly?: boolean; signUrl?: string; onUploaded?: (r: { url: string; kind: "image" | "video" }) => void }) {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false); const [pct, setPct] = useState(0);
   const [err, setErr] = useState("");
@@ -33,7 +33,7 @@ export function ImageUploader({ value, onChange, max = 6, video = false, videoOn
     if (kind === "video" && !allowVideo) throw new Error("Les vidéos ne sont pas acceptées ici.");
     if (kind === "image" && file.size > 10 * 1024 * 1024) throw new Error("Image limitée à 10 Mo.");
     if (kind === "video" && file.size > 80 * 1024 * 1024) throw new Error("Vidéo limitée à 80 Mo.");
-    const sr = await fetch("/api/admin/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind }) });
+    const sr = await fetch(signUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind }) });
     const sig = await sr.json();
     if (!sr.ok) throw new Error(sig.error || "Signature refusée.");
     const fd = new FormData();

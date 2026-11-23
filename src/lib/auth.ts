@@ -32,7 +32,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     if (!u || u.active === false) return null;
     return {
       id: u._id.toString(), firstName: u.firstName || "", lastName: u.lastName || "", email: u.email,
-      phone: u.phone || "", role: (u.role as Role) || "customer", address: u.address || "", city: u.city || "",
+      phone: u.phone || "", role: (u.role as Role) || "customer", address: u.address || "", city: u.city || "", avatar: u.avatar || "",
     };
   } catch {
     return null;

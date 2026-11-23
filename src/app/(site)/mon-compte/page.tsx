@@ -1,12 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb, plain } from "@/lib/db";
-import { StatusBadge } from "@/components/StatusBadge";
-import { UserNotifications } from "@/components/UserNotifications";
-import { AccountForm } from "@/components/AccountForm";
-import { fcfa, fdate } from "@/lib/pricing";
-import { DELIVERY_STATUS, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/labels";
+import { AccountDashboard } from "@/components/AccountDashboard";
 import type { Order } from "@/lib/types";
 export const metadata = { title: "Mon compte" };
 
@@ -15,30 +10,14 @@ export default async function Account() {
   if (!user) redirect("/connexion?next=/mon-compte");
   const db = await getDb();
   const [orders, notes] = await Promise.all([
-    db.collection("orders").find({ userId: user.id }).sort({ createdAt: -1 }).limit(50).toArray(),
-    db.collection("notifications").find({ audience: "user", userId: user.id }).sort({ createdAt: -1 }).limit(10).toArray(),
+    db.collection("orders").find({ userId: user.id, hiddenByUser: { $ne: true } }).sort({ createdAt: -1 }).limit(50).toArray(),
+    db.collection("notifications").find({ audience: "user", userId: user.id }).sort({ createdAt: -1 }).limit(30).toArray(),
   ]);
-  const os: Order[] = plain(orders);
-  const ns: { _id: string; title: string; message: string; createdAt: string; read?: boolean }[] = plain(notes);
+  const ns = plain<{ _id: string; title: string; message: string; createdAt: string; read?: boolean }[]>(notes);
   return (
     <div className="container section">
-      <h1>Bonjour {user.firstName}</h1>
-      {user.role !== "customer" && <p><Link href="/admin" className="btn btn-gold btn-sm">Ouvrir l&apos;administration</Link></p>}
-      <div className="cols2">
-        <div>
-          <h2 style={{ fontSize: "1.4rem" }}>Mes commandes</h2>
-          {os.length === 0 ? <div className="panel muted">Aucune commande pour le moment. <Link href="/menu">Voir le menu</Link></div> :
-            os.map((o) => (
-              <Link key={o._id} href={`/commande/${o._id}`} className="panel" style={{ display: "block", textDecoration: "none", marginBottom: ".8rem" }}>
-                <div className="total"><strong>{o.reference}</strong><strong>{fcfa(o.total)}</strong></div>
-                <div className="muted" style={{ fontSize: ".85rem" }}>{fdate(o.createdAt)}</div>
-                <div className="mini">{o.items.slice(0, 5).map((i, k) => i.image ? <img key={k} src={i.image} alt={i.name} title={i.name} /> : null)}</div>
-                <p style={{ margin: ".4rem 0 0" }}><StatusBadge kind="order" value={o.status} /><StatusBadge kind="payment" value={o.paymentStatus} /><StatusBadge kind="delivery" value={o.deliveryStatus} /></p>
-              </Link>))}
-          <UserNotifications items={ns} />
-        </div>
-        <AccountForm user={{ ...user, address: user.address || "", city: user.city || "" }} />
-      </div>
+      <AccountDashboard user={{ firstName: user.firstName, lastName: user.lastName, email: user.email, phone: user.phone, address: user.address || "", city: user.city || "", avatar: user.avatar || "", role: user.role }}
+        orders={plain<Order[]>(orders)} notes={ns} unread={ns.filter((n) => !n.read).length} />
     </div>
   );
 }

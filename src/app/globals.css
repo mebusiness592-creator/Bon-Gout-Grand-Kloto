@@ -134,3 +134,21 @@ iframe.map{width:100%;height:240px;border:0;border-radius:12px}
 .geo{border:2px dashed var(--leaf);background:#f1f8f2;border-radius:16px;padding:1rem;margin:.6rem 0 1rem}.geo-t{font-weight:800;font-size:1.05rem;color:var(--leaf)}.geo p{margin:.3rem 0 .7rem}.geo-btn{width:100%;font-size:1rem;padding:1rem}.geo small{display:block;margin-top:.5rem;color:var(--muted)}
 .bar{height:8px;background:var(--sand);border-radius:99px;overflow:hidden;margin-top:.4rem}.bar i{display:block;height:100%;background:var(--leaf)}
 .unread{border-left:4px solid var(--flame)!important}
+/* téléphone : plats compacts, 3 par ligne */
+@media(max-width:699px){
+.grid{grid-template-columns:repeat(3,1fr);gap:.5rem}
+.grid .card{border-radius:12px}.grid .card-img{aspect-ratio:1}
+.grid .card-body{padding:.45rem;gap:.25rem}.grid .card-body h3{font-size:.78rem;line-height:1.15;margin:0}
+.grid .card-body .clamp,.grid .card-body .pill,.grid .price-row s{display:none}
+.grid .price-row strong{font-size:.76rem}.grid .badge{font-size:.6rem;padding:.1rem .4rem}.grid .badge.promo{top:4px;left:4px}
+.grid .card-body .btn{font-size:.66rem;padding:.4rem .2rem;line-height:1.1}.grid .card-body .btn svg{display:none}
+}
+/* avatar, cloche, compte */
+.avatar{border-radius:50%;object-fit:cover;background:linear-gradient(135deg,var(--flame),var(--red));color:#fff;display:inline-grid;place-items:center;font-weight:800;flex:none}
+.acc{display:grid;gap:1rem}@media(min-width:900px){.acc{grid-template-columns:260px 1fr;align-items:start}}
+.acc-head{display:flex;gap:.9rem;align-items:center;padding:1rem;background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.acc-menu{display:flex;gap:.4rem;overflow-x:auto;padding:.2rem}.acc-menu button{display:flex;align-items:center;gap:.5rem;white-space:nowrap;border:0;background:#fff;border:1px solid var(--line);padding:.7rem 1rem;border-radius:12px;font:inherit;font-weight:700;cursor:pointer;color:var(--brown)}
+.acc-menu button.on{background:var(--brown);color:#fff;border-color:var(--brown)}
+@media(min-width:900px){.acc-menu{flex-direction:column}.acc-menu button{width:100%}}
+.nrow{display:flex;gap:.6rem;justify-content:space-between;align-items:flex-start;padding:.7rem 0;border-bottom:1px solid var(--line)}
+.xbtn{border:0;background:none;color:var(--muted);cursor:pointer;padding:.3rem}.xbtn:hover{color:var(--red)}

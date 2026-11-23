@@ -1,21 +1,19 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Menu, X, ShoppingBasket, User, Utensils } from "lucide-react";
+import { ShoppingBasket, User, Utensils, ShieldCheck } from "lucide-react";
 import { useCart } from "./CartProvider";
+import { Avatar } from "./Avatar";
+import { NotificationBell, type Notif } from "./NotificationBell";
 
 const links = [
   ["/", "Accueil"], ["/restaurant", "Restaurant"], ["/menu", "Menu"], ["/production-locale", "Produits locaux"],
   ["/produits", "Boutique locale"], ["/contact", "Contact"],
 ];
-const drawerExtra = [["/a-propos", "À propos"]];
-export function SiteHeader({ name, user, unread = 0 }: { name: string; user: { name: string; role: string } | null; unread?: number }) {
-  const [open, setOpen] = useState(false);
+export function SiteHeader({ name, user, unread = 0, notes = [] }: { name: string; user: { name: string; role: string; avatar?: string } | null; unread?: number; notes?: Notif[] }) {
   const path = usePathname();
   const { count } = useCart();
-  useEffect(() => setOpen(false), [path]);
-  const acct = user ? (user.role === "customer" ? "/mon-compte" : "/admin") : "/connexion";
+  const staff = user && user.role !== "customer";
   return (
     <header className="topbar">
       <div className="container in">
@@ -24,18 +22,12 @@ export function SiteHeader({ name, user, unread = 0 }: { name: string; user: { n
           {links.map(([h, l]) => <Link key={h} href={h} className={path === h ? "on" : ""}>{l}</Link>)}
         </nav>
         <div className="tools">
-          <Link href={acct} className="iconbtn desk" aria-label="Mon compte" title={user ? user.name : "Se connecter"}><User size={20} />{unread > 0 && <span className="count">{unread}</span>}</Link>
+          {staff && <Link href="/admin" className="iconbtn" aria-label="Administration" title="Administration"><ShieldCheck size={20} /></Link>}
+          {user && <NotificationBell items={notes} unread={unread} />}
+          <Link href={user ? "/mon-compte" : "/connexion"} className="iconbtn desk" aria-label="Mon compte" title={user ? user.name : "Se connecter"}>{user?.avatar ? <Avatar src={user.avatar} name={user.name} size={34} /> : <User size={20} />}</Link>
           <Link href="/panier" className="iconbtn desk" aria-label="Panier"><ShoppingBasket size={20} />{count > 0 && <span className="count">{count}</span>}</Link>
-          <button className="iconbtn burger" aria-label="Menu" onClick={() => setOpen(!open)}>{open ? <X size={20} /> : <Menu size={20} />}</button>
         </div>
       </div>
-      {open && (
-        <div className="drawer">
-          {[...links, ...drawerExtra].map(([h, l]) => <Link key={h} href={h}>{l}</Link>)}
-          <Link href={acct}>{user ? `Mon compte${unread ? ` (${unread})` : ""}` : "Connexion / Inscription"}</Link>
-          <Link href="/panier">Panier {count > 0 ? `(${count})` : ""}</Link>
-        </div>
-      )}
     </header>
   );
 }

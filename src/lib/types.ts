@@ -24,5 +24,5 @@ export type Order = {
 };
 export type AppUser = {
   id: string; firstName: string; lastName: string; email: string; phone: string;
-  role: Role; address?: string; city?: string;
+  role: Role; address?: string; city?: string; avatar?: string;
 };

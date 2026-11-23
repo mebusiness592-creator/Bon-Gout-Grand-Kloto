@@ -9,7 +9,7 @@ import type { Order } from "@/lib/types";
 
 type Mode = "orders" | "deliveries" | "payments";
 
-export function OrdersManager({ orders, mode }: { orders: Order[]; mode: Mode }) {
+export function OrdersManager({ orders, mode, canDelete = false }: { orders: Order[]; mode: Mode; canDelete?: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState(""); const [date, setDate] = useState(""); const [status, setStatus] = useState(""); const [type, setType] = useState("");
   const [sel, setSel] = useState<string | null>(null);
@@ -39,6 +39,11 @@ export function OrdersManager({ orders, mode }: { orders: Order[]; mode: Mode })
     setBusy(false);
     if (!r.ok) return setMsg(d.error || "Mise à jour impossible.");
     setMsg("Mise à jour enregistrée."); setVals({}); setNote(""); router.refresh();
+  }
+  async function remove() {
+    if (!current || !confirm(`Supprimer définitivement la commande ${current.reference} ?`)) return;
+    const r = await fetch(`/api/admin/orders/${current.reference ? current._id : ""}`, { method: "DELETE" });
+    if (r.ok) { setSel(null); router.refresh(); } else setMsg((await r.json().catch(() => ({}))).error || "Suppression impossible.");
   }
   const loc = current?.location;
   const sels: [string, string, Record<string, string>, string][] = [
@@ -96,6 +101,7 @@ export function OrdersManager({ orders, mode }: { orders: Order[]; mode: Mode })
                 <button className="btn btn-leaf btn-sm" disabled={busy} onClick={() => save({ paymentStatus: "paid" })}>Confirmer le paiement</button>
                 <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => save({ paymentStatus: "failed" })}>Refuser</button></>}
             </div>
+            {canDelete && <p style={{ marginTop: "1rem" }}><button className="btn btn-danger btn-sm" onClick={remove}>Supprimer cette commande</button></p>}
             {(current.history?.length ?? 0) > 0 && <><h3 style={{ marginTop: "1.2rem", fontSize: "1rem" }}>Historique</h3>
               {[...(current.history || [])].reverse().map((h, i) => <div key={i} className="muted" style={{ fontSize: ".8rem" }}>{fdate(h.at)} · {h.by} · {h.field === "note" ? `note : ${h.to}` : `${h.field} → ${(PAYMENT_STATUS[h.to] || ORDER_STATUS[h.to] || DELIVERY_STATUS[h.to] || h.to)}`}{h.note && h.field !== "note" ? ` (${h.note})` : ""}</div>)}</>}
           </div>

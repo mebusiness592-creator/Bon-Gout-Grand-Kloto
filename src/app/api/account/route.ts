@@ -7,8 +7,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { json, sameOrigin } from "@/lib/guard";
 
 const schema = z.object({
-  firstName: z.string().trim().min(2).max(60), lastName: z.string().trim().min(2).max(60),
-  phone: z.string().trim().regex(/^[+0-9\s().-]{6,20}$/), address: z.string().trim().max(300).optional(), city: z.string().trim().max(100).optional(),
+  firstName: z.string().trim().min(2).max(60).optional(), lastName: z.string().trim().min(2).max(60).optional(),
+  phone: z.string().trim().regex(/^[+0-9\s().-]{6,20}$/).optional(), address: z.string().trim().max(300).optional(), city: z.string().trim().max(100).optional(),
+  avatar: z.string().max(600).optional(),
   currentPassword: z.string().max(72).optional(), newPassword: z.string().min(8).max(72).optional(),
 });
 export async function PATCH(req: NextRequest) {
@@ -19,13 +20,19 @@ export async function PATCH(req: NextRequest) {
   if (!p.success) return json({ error: "Informations invalides." }, 400);
   const d = p.data;
   const db = await getDb();
-  const set: Record<string, unknown> = { firstName: d.firstName, lastName: d.lastName, phone: d.phone, address: d.address || "", city: d.city || "" };
+  const set: Record<string, unknown> = {};
+  for (const k of ["firstName", "lastName", "phone", "address", "city"] as const) if (d[k] !== undefined) set[k] = d[k];
+  if (d.avatar !== undefined) {
+    const prefix = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/`;
+    if (d.avatar !== "" && !d.avatar.startsWith(prefix)) return json({ error: "Photo invalide." }, 400);
+    set.avatar = d.avatar;
+  }
   if (d.newPassword) {
     const u = await db.collection("users").findOne({ _id: new ObjectId(user.id) });
     if (!d.currentPassword || !u || !(await bcrypt.compare(d.currentPassword, u.passwordHash || ""))) return json({ error: "Mot de passe actuel incorrect." }, 400);
     set.passwordHash = await bcrypt.hash(d.newPassword, 12);
   }
   // le rôle et l'e-mail ne sont jamais modifiables ici
-  await db.collection("users").updateOne({ _id: new ObjectId(user.id) }, { $set: set });
+  if (Object.keys(set).length) await db.collection("users").updateOne({ _id: new ObjectId(user.id) }, { $set: set });
   return json({ ok: true });
 }

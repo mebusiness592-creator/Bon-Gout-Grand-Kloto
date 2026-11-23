@@ -19,6 +19,7 @@ export function AdminNav({ role, unread }: { role: string; unread: number }) {
           <Link key={h} href={h} className={path === h ? "on" : ""}>{l}{h === "/admin/notifications" && unread > 0 ? ` (${unread})` : ""}</Link>
         ))}
         <Link href="/">← Voir le site</Link>
+        <Link href="/mon-compte">Mon espace client</Link>
         <a href="#" onClick={(e) => { e.preventDefault(); logout(); }}>Déconnexion</a>
       </nav>
     </aside>
