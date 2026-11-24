@@ -19,6 +19,9 @@ has("MONGODB_URI") ? (/^mongodb(\+srv)?:\/\//.test(env.MONGODB_URI) ? ok("MONGOD
 has("AUTH_SECRET") ? (env.AUTH_SECRET.length >= 32 ? ok("AUTH_SECRET") : ko("AUTH_SECRET : 32 caractères minimum")) : ko("AUTH_SECRET");
 for (const k of ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"]) has(k) ? ok(k) : ko(k + " (photos/vidéos)");
 
+console.log("\n== Tâche planifiée (nettoyage + notifications quotidiennes) ==");
+has("CRON_SECRET") ? ok("CRON_SECRET") : wa("CRON_SECRET non défini : la tâche de nuit sera refusée (nettoyage uniquement lors des visites, pas de notifications quotidiennes)");
+
 console.log("\n== Paiement mobile USSD ==");
 for (const op of ["TMoney", "Flooz"]) {
   const k = `USSD_${op}_TEMPLATE`;

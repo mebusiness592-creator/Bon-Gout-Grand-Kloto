@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Le restaurant" };
 
 export default async function Restaurant() {
   const [s, media, banners] = await Promise.all([getSettings(), getMedia("restaurant", 12), getMedia("accueil-restaurant", 10)]);
-  const hero = banners.filter((m) => m.kind === "image").map((m) => m.url);
+  const hero = banners.map((m) => m.url);
   const specs = ["Cuisine africaine", "Cuisine européenne", "Fast-food", "Fufu et pâte", "Riz et préparations", "Poulet, poisson et viande", "Grillades et barbecue", "Shawarma", "Burgers"];
   return (
     <>

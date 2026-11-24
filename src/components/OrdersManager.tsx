@@ -9,7 +9,7 @@ import type { Order } from "@/lib/types";
 
 type Mode = "orders" | "deliveries" | "payments";
 
-export function OrdersManager({ orders, mode }: { orders: Order[]; mode: Mode }) {
+export function OrdersManager({ orders, mode, canDelete = false }: { orders: Order[]; mode: Mode; canDelete?: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState(""); const [date, setDate] = useState(""); const [status, setStatus] = useState(""); const [type, setType] = useState("");
   const [sel, setSel] = useState<string | null>(null);
@@ -41,6 +41,15 @@ export function OrdersManager({ orders, mode }: { orders: Order[]; mode: Mode })
     setMsg("Mise à jour enregistrée."); setVals({}); setNote(""); router.refresh();
   }
 
+  async function del() {
+    if (!current || !confirm(`Supprimer définitivement la commande ${current.reference} ?`)) return;
+    setBusy(true); setMsg("");
+    const r = await fetch(`/api/admin/orders/${current._id}`, { method: "DELETE" });
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setMsg(d.error || "Suppression impossible.");
+    setSel(null); router.refresh();
+  }
   const loc = current?.location;
   const sels: [string, string, Record<string, string>, string][] = [
     ["status", "Statut de la commande", ORDER_STATUS, current?.status || ""],
@@ -95,6 +104,7 @@ export function OrdersManager({ orders, mode }: { orders: Order[]; mode: Mode })
             <label>Note (historique)</label><input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} />
             <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginTop: ".8rem" }}>
               <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => save()}>Enregistrer</button>
+              {mode === "orders" && canDelete && <button className="btn btn-danger btn-sm" disabled={busy} onClick={del}>Supprimer la commande</button>}
               {mode === "payments" && current.paymentMethod === "ussd" && <>
                 <button className="btn btn-leaf btn-sm" disabled={busy} onClick={() => save({ paymentStatus: "paid" })}>Confirmer le paiement</button>
                 <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => save({ paymentStatus: "failed" })}>Refuser</button></>}

@@ -2,12 +2,13 @@ import Link from "next/link";
 import type { Product } from "@/lib/types";
 import { effectivePrice, isPromo, isRange, priceLabel, fcfa, productImage } from "@/lib/pricing";
 import { AddToCart } from "./AddToCart";
+import { groupsOf } from "@/lib/options";
 
 export function ProductCard({ p }: { p: Product }) {
   const img = productImage(p);
   const href = (p.section === "restaurant" ? "/menu/" : "/produits/") + p._id;
   const out = !p.available || (typeof p.stock === "number" && p.stock <= 0);
-  const needsChoice = isRange(p) || (p.variants?.length ?? 0) > 0;
+  const needsChoice = isRange(p) || groupsOf(p).length > 0;
   return (
     <article className="card">
       <Link href={href} className="card-img" aria-label={p.name}>

@@ -6,7 +6,7 @@ import { Bell, Trash2, X } from "lucide-react";
 import { fdate } from "@/lib/pricing";
 import { PushButton } from "./PushButton";
 
-export type Notif = { _id: string; title: string; message: string; createdAt: string; read?: boolean };
+export type Notif = { _id: string; title: string; message: string; createdAt: string; read?: boolean; image?: string | null };
 const H = { "Content-Type": "application/json" };
 
 /** Liste des notifications du client avec suppression (message par message ou tout l'historique). */
@@ -22,12 +22,12 @@ export function NotifPanel({ items }: { items: Notif[] }) {
       {list.length === 0 ? <p className="muted">Aucune notification.</p> : <>
         {list.map((n) => (
           <div key={n._id} className={`nrow ${n.read ? "" : "unread"}`} style={{ paddingLeft: n.read ? 0 : ".6rem" }}>
-            <div><strong>{n.title}</strong><div className="muted" style={{ fontSize: ".9rem" }}>{n.message}</div><small className="muted">{fdate(n.createdAt)}</small></div>
+            {n.image && <img className="nimg" src={n.image} alt="" loading="lazy" />}<div style={{ flex: 1 }}><strong>{n.title}</strong><div className="muted" style={{ fontSize: ".9rem" }}>{n.message}</div><small className="muted">{fdate(n.createdAt)}</small></div>
             <button className="xbtn" aria-label="Supprimer ce message" onClick={() => del(n._id)}><Trash2 size={17} /></button>
           </div>))}
         <p style={{ marginTop: ".8rem" }}><button className="btn btn-danger btn-sm" onClick={clear}>Tout supprimer</button></p>
       </>}
-      <p className="muted" style={{ fontSize: ".78rem" }}>Les notifications sont supprimées automatiquement après 2 jours.</p>
+      <p className="muted" style={{ fontSize: ".78rem" }}>Les notifications sont supprimées automatiquement après 5 jours.</p>
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { json, sameOrigin, tooMany } from "@/lib/guard";
 import { getSettings } from "@/lib/settings";
 import { effectivePrice } from "@/lib/pricing";
+import { groupsOf, itemKind } from "@/lib/options";
+import type { OrderOption } from "@/lib/types";
 import { notify } from "@/lib/notify";
 
 const schema = z.object({
@@ -18,11 +20,12 @@ const schema = z.object({
   operator: z.enum(["TMoney", "Flooz"]).optional(),
   location: z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), accuracy: z.number().optional() }).nullable().optional(),
   items: z.array(z.object({
-    productId: z.string().min(1), variantId: z.string().max(40).optional(),
+    productId: z.string().min(1),
     unitPrice: z.number().int().min(0).max(100_000_000).optional(), quantity: z.number().int().min(1).max(30),
+    options: z.array(z.object({ groupId: z.string().min(1).max(40), itemId: z.string().min(1).max(40), amount: z.number().int().min(0).max(100_000_000).optional() })).max(40).optional(),
   })).min(1).max(40),
 });
-type Line = { productId: string; variantId?: string; unitPrice?: number; quantity: number };
+type Line = { productId: string; unitPrice?: number; quantity: number; options?: { groupId: string; itemId: string; amount?: number }[] };
 
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return json({ error: "Origine refusée." }, 403);
@@ -38,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const lines = new Map<string, Line>();
     for (const it of data.items) {
-      const k = `${it.productId}|${it.variantId || ""}|${it.unitPrice ?? ""}`;
+      const k = `${it.productId}|${it.unitPrice ?? ""}|${(it.options || []).map((o) => `${o.groupId}.${o.itemId}.${o.amount ?? ""}`).sort().join(",")}`;
       const cur = lines.get(k);
       if (cur) cur.quantity = Math.min(30, cur.quantity + it.quantity); else lines.set(k, { ...it });
     }
@@ -54,12 +57,32 @@ export async function POST(req: NextRequest) {
     const qtyByProduct = new Map<string, number>();
     for (const l of lines.values()) {
       const p = pm.get(l.productId)!;
-      const variants = (p.variants || []) as { id: string; label: string; image?: string }[];
-      let variant: { id: string; label: string; image?: string } | undefined;
-      if (variants.length) {
-        variant = variants.find((v) => v.id === l.variantId);
-        if (!variant) return json({ error: `Choisissez une option pour « ${p.name} ».` }, 400);
+      // Accompagnements : chaque choix est revérifié sur la base (groupes, éléments, limites de prix, obligatoire / multiple).
+      const groups = groupsOf({ optionGroups: p.optionGroups, variants: p.variants });
+      const picked = l.options || [];
+      const chosen: OrderOption[] = [];
+      let extras = 0;
+      for (const o of picked) {
+        const g = groups.find((x) => x.id === o.groupId);
+        const it = g?.items.find((x) => x.id === o.itemId);
+        if (!g || !it) return json({ error: `Un accompagnement de « ${p.name} » n'est plus disponible. Actualisez votre panier.` }, 400);
+        if (chosen.some((c) => c.groupId === g.id && c.itemId === it.id)) return json({ error: "Accompagnement en double." }, 400);
+        const kind = itemKind(it);
+        let amount: number | undefined;
+        if (kind === "fixed") amount = it.priceMin as number;
+        else if (kind === "range") {
+          if (o.amount === undefined || o.amount < (it.priceMin as number) || o.amount > (it.priceMax as number)) return json({ error: `Montant invalide pour « ${it.label} » (entre ${it.priceMin} et ${it.priceMax} FCFA).` }, 400);
+          amount = o.amount;
+        }
+        extras += amount ?? 0;
+        chosen.push({ groupId: g.id, groupLabel: g.label, itemId: it.id, label: it.label, image: it.image || null, ...(amount === undefined ? {} : { amount }) });
       }
+      for (const g of groups) {
+        const n = chosen.filter((c) => c.groupId === g.id).length;
+        if (g.required && n === 0) return json({ error: `Choisissez : ${g.label} (« ${p.name} »).` }, 400);
+        if (!g.multiple && n > 1) return json({ error: `Un seul choix possible pour ${g.label}.` }, 400);
+      }
+      const summary = chosen.map((c) => (c.amount ? `${c.label} (${c.amount} FCFA)` : c.label)).join(" · ");
       const min = Number(p.price);
       const max = typeof p.priceMax === "number" ? p.priceMax : null;
       let unit: number;
@@ -68,8 +91,8 @@ export async function POST(req: NextRequest) {
         unit = l.unitPrice;
       } else unit = effectivePrice({ price: min, promoPrice: p.promoPrice });
       items.push({
-        productId: l.productId, variantId: variant?.id || null, variantLabel: variant?.label || null, name: p.name, section: p.section,
-        quantity: l.quantity, unitPrice: unit, image: variant?.image || p.images?.[0] || p.imageUrl || null,
+        productId: l.productId, options: chosen, variantLabel: summary || null, name: p.name, section: p.section,
+        quantity: l.quantity, unitPrice: unit + extras, image: p.images?.[0] || p.imageUrl || null,
       });
       qtyByProduct.set(l.productId, (qtyByProduct.get(l.productId) || 0) + l.quantity);
     }
@@ -104,11 +127,11 @@ export async function POST(req: NextRequest) {
     };
     const res = await db.collection("orders").insertOne(order);
     const id = res.insertedId.toString();
-    if (settings.notifyNewOrders) await notify({ audience: "admin", title: "Nouvelle commande", message: `Commande ${order.reference} – ${order.customerName}`, orderId: id, type: "order" });
+    if (settings.notifyNewOrders) await notify({ audience: "admin", title: "Nouvelle commande", message: `Commande ${order.reference} – ${order.customerName}`, orderId: id, type: "order", image: (items[0]?.image as string | null) || null });
     for (const p of products) {
       if (typeof p.stock === "number" && p.stock - (qtyByProduct.get(p._id.toString()) as number) <= 3) await notify({ audience: "admin", title: "Stock faible", message: `« ${p.name} » : il reste ${Math.max(0, p.stock - (qtyByProduct.get(p._id.toString()) as number))} en stock.`, type: "stock" });
     }
-    if (user) await notify({ audience: "user", userId: user.id, title: "Commande reçue", message: `Votre commande ${order.reference} a bien été enregistrée.`, orderId: id, type: "order" });
+    if (user) await notify({ audience: "user", userId: user.id, title: "Commande reçue", message: `Votre commande ${order.reference} a bien été enregistrée.`, orderId: id, type: "order", image: (items[0]?.image as string | null) || null });
     return json({ id, reference: order.reference, token: order.accessToken });
   } catch {
     return json({ error: "Impossible d'enregistrer la commande." }, 500);

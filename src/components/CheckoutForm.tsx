@@ -65,7 +65,7 @@ export function CheckoutForm({ deliveryFee, freeFrom, allowCod, allowUssd, defau
     e.preventDefault(); setErr(""); setBusy(true);
     const r = await fetch("/api/orders", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...f, paymentMethod: pay, operator: pay === "ussd" ? operator : undefined, location: loc, items: lines.map((l) => ({ productId: l.productId, variantId: l.variantId, unitPrice: l.price, quantity: l.quantity })) }),
+      body: JSON.stringify({ ...f, paymentMethod: pay, operator: pay === "ussd" ? operator : undefined, location: loc, items: lines.map((l) => ({ productId: l.productId, unitPrice: l.baseUnit, quantity: l.quantity, options: (l.options || []).map((o) => ({ groupId: o.groupId, itemId: o.itemId, amount: o.amount })) })) }),
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) { setErr(d.error || "Commande impossible."); setBusy(false); return; }
@@ -92,9 +92,11 @@ export function CheckoutForm({ deliveryFee, freeFrom, allowCod, allowUssd, defau
         <label htmlFor="c">Ville ou quartier</label><input id="c" value={f.city} onChange={set("city")} maxLength={100} />
         <label htmlFor="i">Informations complémentaires (repère, étage…)</label><textarea id="i" rows={2} value={f.notes} onChange={set("notes")} maxLength={500} />
         <h3 style={{ marginTop: "1.4rem" }}>Mode de paiement</h3>
-        {allowUssd && <div className="check"><input id="u" type="radio" checked={pay === "ussd"} onChange={() => setPay("ussd")} /><label htmlFor="u">Mobile money (USSD)</label></div>}
-        {allowUssd && pay === "ussd" && <div className="chips"><button type="button" className={`chip ${operator === "TMoney" ? "on" : ""}`} onClick={() => setOperator("TMoney")}>TMoney</button><button type="button" className={`chip ${operator === "Flooz" ? "on" : ""}`} onClick={() => setOperator("Flooz")}>Flooz</button></div>}
-        {allowCod && <div className="check"><input id="d" type="radio" checked={pay === "delivery"} onChange={() => setPay("delivery")} /><label htmlFor="d">Paiement à la livraison</label></div>}
+        <div className="payopts" role="radiogroup" aria-label="Mode de paiement">
+          {allowUssd && <button type="button" role="radio" aria-checked={pay === "ussd"} className={`payopt ${pay === "ussd" ? "on" : ""}`} onClick={() => setPay("ussd")}><span className="acc-ind">{pay === "ussd" ? "✓" : ""}</span><span><strong>📱 Mobile money (USSD)</strong><small>TMoney ou Flooz : le code se compose en un clic</small></span></button>}
+          {allowCod && <button type="button" role="radio" aria-checked={pay === "delivery"} className={`payopt ${pay === "delivery" ? "on" : ""}`} onClick={() => setPay("delivery")}><span className="acc-ind">{pay === "delivery" ? "✓" : ""}</span><span><strong>💵 Paiement à la livraison</strong><small>Vous payez à la réception de votre commande</small></span></button>}
+        </div>
+        {allowUssd && pay === "ussd" && <><label>Votre opérateur</label><div className="chips" style={{ marginTop: ".3rem" }}><button type="button" className={`chip ${operator === "TMoney" ? "on" : ""}`} onClick={() => setOperator("TMoney")}>TMoney</button><button type="button" className={`chip ${operator === "Flooz" ? "on" : ""}`} onClick={() => setOperator("Flooz")}>Flooz</button></div></>}
         {!allowUssd && !allowCod && <div className="err">Aucun mode de paiement n&apos;est activé pour le moment.</div>}
       </div>
       <div className="panel">
@@ -102,7 +104,7 @@ export function CheckoutForm({ deliveryFee, freeFrom, allowCod, allowUssd, defau
         {lines.map((l) => <div className="total" key={l.lineId}><span>{l.quantity} × {l.name}{l.variantLabel ? ` (${l.variantLabel})` : ""}</span><span>{fcfa(l.quantity * l.price)}</span></div>)}
         <div className="total"><span>Livraison</span><span>{fee ? fcfa(fee) : "—"}</span></div>
         <div className="total big"><span>Total</span><span>{fcfa(subtotal + fee)}</span></div>
-        <button className="btn btn-primary" style={{ width: "100%", marginTop: ".8rem" }} disabled={busy || (!allowUssd && !allowCod)}>{busy ? "Envoi…" : "Confirmer la commande"}</button>
+        <button className="btn btn-primary" style={{ width: "100%", marginTop: ".8rem" }} disabled={busy || (!allowUssd && !allowCod)}>{busy ? "Envoi…" : pay === "ussd" ? "Valider et passer au paiement" : "Confirmer la commande"}</button>
         <p className="muted" style={{ fontSize: ".8rem" }}>En commandant, vous acceptez nos <Link href="/conditions">conditions générales</Link>.</p>
       </div>
     </form>

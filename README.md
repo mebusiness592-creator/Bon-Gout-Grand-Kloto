@@ -1,6 +1,6 @@
 # Bon Goût du Grand Kloto — plateforme restaurant + production locale
 
-Version finale 3.1. Next.js 15 · React 19 · TypeScript · MongoDB Atlas · Cloudinary.
+Version finale 3.2. Next.js 15 · React 19 · TypeScript · MongoDB Atlas · Cloudinary.
 
 ## Installation
 ```bash
@@ -70,9 +70,33 @@ Importer le dépôt, ajouter les variables d'environnement ci-dessus (ne pas éc
 Collections conservées : `products` (sections `restaurant` / `huile`, ancien champ `imageUrl` toujours lu ; nouveaux champs `priceMax`, `variants`), `categories` (champ `image` ajouté), `orders`, `notifications`. Les anciennes notifications (sans champ `audience`) restent visibles côté admin.
 
 
-## Rétention automatique des commandes et historiques
+## Rétention automatique des commandes et historiques (version 3.2)
 
-- Les commandes sont supprimées automatiquement après 5 jours. Les nouvelles commandes utilisent un champ date BSON avec un index TTL MongoDB ; les anciennes commandes sont également nettoyées par la tâche de maintenance.
-- Les entrées de l'historique des actions d'une commande et les notifications sont supprimées lorsqu'elles dépassent 2 jours.
-- Vercel exécute `/api/maintenance/cleanup` chaque nuit. Définir `CRON_SECRET` dans les variables d'environnement Vercel (et dans `.env.local` en local) avec une valeur aléatoire secrète. Le nettoyage est aussi déclenché lors des visites du site et de l'administration.
-- Les commandes ne peuvent plus être supprimées individuellement depuis le compte client ou l'administration : la suppression est commune et automatique.
+- **Commandes : supprimées automatiquement après 10 jours** (l'historique des changements de statut est dans la commande et disparaît avec elle). Un index TTL MongoDB sur `createdAtDate` fait le travail ; l'ancien index de 5 jours est corrigé automatiquement au premier nettoyage. Les anciennes commandes (date texte) sont aussi nettoyées par la tâche de maintenance.
+- **Notifications : supprimées après 5 jours.**
+- Durées modifiables en tête de `src/lib/purge.ts` (`ORDER_RETENTION_DAYS`, `NOTIFICATION_RETENTION_DAYS`).
+- Vercel exécute `/api/maintenance/cleanup` chaque nuit (minuit UTC = minuit au Togo). Définir `CRON_SECRET` dans Vercel (et `.env.local`). Le nettoyage est aussi déclenché lors des visites du site et de l'administration.
+- **Côté client, aucun bouton de suppression de commande.** Dans l'administration, l'**administrateur** peut supprimer définitivement une commande (bouton « Supprimer la commande »).
+
+## Accompagnements des plats (3.2)
+Admin > Restaurant > plat > « Accompagnements du plat » : créer des **groupes** (ex. « Type de sauce », « Viande ») et, dans chaque groupe, des **éléments** avec photo, description et prix.
+- Groupe : « choix obligatoire » et/ou « plusieurs choix possibles ».
+- Élément : prix vide = inclus (pas de champ de prix) ; un seul prix = prix fixe ; **minimum + maximum = le client saisit son montant dans cet intervalle** (vérifié côté serveur).
+- Sur la fiche du plat : galerie photos/vidéos qui défile (4,5 s ; une vidéo est lue en entier), le plat est sélectionné automatiquement, le client choisit la quantité puis ses accompagnements. Total calculé en direct.
+- Les anciennes « variantes » sont lues comme un groupe obligatoire à choix unique (aucune donnée perdue) ; à l'enregistrement d'un plat, elles sont converties en groupe.
+
+## Bannières avec vidéos
+Admin > Galerie : on peut mélanger photos et vidéos dans les bannières. Les images restent 4,5 s ; les vidéos sont lues (muettes) jusqu'au bout puis le diaporama continue.
+
+## Guide de commande
+Admin > Guide de commande : titre, introduction, vidéo et étapes. Sur l'accueil, le bouton « Comment commander ? » ouvre le guide en fenêtre agrandie.
+
+## Paiement
+À la commande : deux boutons (« Mobile money (USSD) » ou « Paiement à la livraison »). Pour le mobile money : choix de l'opérateur (TMoney / Flooz), puis sur la page de la commande le bouton **« Ouvrir le composeur avec le code »** (code prérempli avec le montant total calculé), puis **« Confirmer que j'ai payé »** (la commande passe « en attente de vérification », l'admin confirme). Nécessite `USSD_TMoney_TEMPLATE` / `USSD_Flooz_TEMPLATE`.
+
+## Notifications automatiques quotidiennes
+- Tous les jours : **7 h, 12 h et 18 h** (heure du Togo = UTC), avec un message d'accroche et la **photo d'un plat** adapté au moment (petit-déjeuner / déjeuner / dîner). Les horaires et les textes se modifient dans `src/lib/daily.ts`.
+- Dans Admin > Restaurant, renseigner « Moment de la journée » sur les plats qui illustrent chaque notification. Sans cela, le message part avec un plat au hasard (ou sans photo).
+- Les notifications sont envoyées à **tous les abonnés** ; le site ne propose pas de les désactiver (un utilisateur peut toujours les bloquer dans les réglages de son téléphone/navigateur). Un utilisateur doit avoir accepté les notifications (bouton « Activer les notifications » dans Mon compte).
+- Fonctionnement : la tâche de minuit programme les 3 envois du jour chez OneSignal (offre Vercel gratuite : une seule exécution par jour suffit). Aucun doublon grâce à un marqueur en base. Nécessite `ONESIGNAL_REST_API_KEY`, `NEXT_PUBLIC_ONESIGNAL_APP_ID`, `NEXT_PUBLIC_SITE_URL` et `CRON_SECRET`.
+- Les notifications de commande (admin et clients) portent aussi l'image du plat concerné.

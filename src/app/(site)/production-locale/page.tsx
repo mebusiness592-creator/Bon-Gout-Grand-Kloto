@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Produits locaux" };
 
 export default async function Production() {
   const [media, products, cats] = await Promise.all([getMedia("production-locale", 12), getProducts({ section: "huile", onlyAvailable: true, limit: 4 }), getCategories("huile")]);
-  const imgs = media.filter((m) => m.kind === "image").map((m) => m.url);
+  const imgs = media.map((m) => m.url);
   return (
     <>
       <section className="hero" style={{ background: "linear-gradient(120deg,#14361c,#2f6b3a 60%,#8a5a12)" }}>

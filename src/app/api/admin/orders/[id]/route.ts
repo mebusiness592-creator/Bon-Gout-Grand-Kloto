@@ -53,8 +53,21 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (set.status) parts.push(`statut : ${ORDER_STATUS[set.status as string]}`);
     if (set.paymentStatus) parts.push(`paiement : ${PAYMENT_STATUS[set.paymentStatus as string]}`);
     if (set.deliveryStatus) parts.push(`livraison : ${DELIVERY_STATUS[set.deliveryStatus as string]}`);
-    if (parts.length) await notify({ audience: "user", userId: order.userId, title: `Commande ${order.reference}`, message: parts.join(" · "), orderId: _id.toString(), type: "order" });
+    if (parts.length) await notify({ audience: "user", userId: order.userId, title: `Commande ${order.reference}`, message: parts.join(" · "), orderId: _id.toString(), type: "order", image: ((order.items || [])[0] as { image?: string } | undefined)?.image || null });
   }
+  return json({ ok: true });
+}
+
+/** Suppression définitive d'une commande (administrateur uniquement). */
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const g = await guard(req, ["admin"]);
+  if ("error" in g) return g.error;
+  const _id = oid((await ctx.params).id);
+  if (!_id) return json({ error: "Requête invalide." }, 400);
+  const db = await getDb();
+  const r = await db.collection("orders").deleteOne({ _id });
+  if (!r.deletedCount) return json({ error: "Commande introuvable." }, 404);
+  await db.collection("notifications").deleteMany({ orderId: _id.toString() });
   return json({ ok: true });
 }
 

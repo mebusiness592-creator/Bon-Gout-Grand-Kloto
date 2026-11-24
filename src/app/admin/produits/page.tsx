@@ -21,7 +21,7 @@ export default async function Page() {
     { name: "categoryId", label: "Catégorie", type: "select", options: categories.map((c) => ({ value: c._id, label: c.name })) },
     { name: "images", label: "Galerie de photos", type: "images" },
     { name: "videos", label: "Vidéos (facultatif)", type: "videos", help: "MP4, WebM ou MOV — 80 Mo maximum par vidéo." },
-    { name: "variants", label: "Variantes à choisir par le client (avec photo)", type: "variants", help: "Ex. : différents conditionnements ou variétés." },
+    { name: "optionGroups", label: "Options à choisir par le client", type: "groups", help: "Ex. : groupe « Conditionnement » ou « Variété », avec photo, description et prix éventuel." },
     { name: "available", label: "Disponible à la vente", type: "bool" },
   ];
   return <ResourceManager resource="produits" title="Production locale" noun="produit" items={plain(items)} fields={fields}

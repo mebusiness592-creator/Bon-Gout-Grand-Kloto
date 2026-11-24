@@ -19,7 +19,8 @@ export default async function Page() {
     { name: "categoryId", label: "Catégorie", type: "select", options: categories.map((c) => ({ value: c._id, label: c.name })) },
     { name: "images", label: "Galerie de photos du plat", type: "images" },
     { name: "videos", label: "Vidéos du plat (facultatif)", type: "videos", help: "MP4, WebM ou MOV — 80 Mo maximum par vidéo." },
-    { name: "variants", label: "Associations / options à choisir par le client (avec photo)", type: "variants", help: "Ex. : Foufou + sauce d'arachide, Foufou + sauce tomate. Le client choisit avant de commander." },
+    { name: "mealTime", label: "Moment de la journée (pour les notifications automatiques)", type: "select", options: [{ value: "matin", label: "Petit-déjeuner (matin)" }, { value: "midi", label: "Déjeuner (midi)" }, { value: "soir", label: "Dîner (soir)" }], help: "Ce plat (avec sa photo) pourra illustrer la notification du matin, de midi ou du soir. Vide = non utilisé." },
+    { name: "optionGroups", label: "Accompagnements du plat", type: "groups", help: "Ex. : groupe « Type de sauce » (choix unique, sans prix) et groupe « Viande » (plusieurs choix, avec prix minimum et maximum). Chaque élément peut avoir sa photo et sa description." },
     { name: "available", label: "Disponible à la commande", type: "bool" },
     { name: "featured", label: "Mettre en avant (plat populaire)", type: "bool" },
   ];

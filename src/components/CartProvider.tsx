@@ -2,14 +2,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Section } from "@/lib/types";
 
-export type CartLine = { lineId: string; productId: string; variantId?: string; variantLabel?: string; name: string; price: number; image?: string; section: Section; quantity: number };
+export type CartOption = { groupId: string; groupLabel: string; itemId: string; label: string; amount?: number };
+/** price = prix unitaire total (plat + accompagnements) ; baseUnit = montant choisi pour le plat lui-même (prix à fourchette uniquement). */
+export type CartLine = { lineId: string; productId: string; variantLabel?: string; options?: CartOption[]; baseUnit?: number; name: string; price: number; image?: string; section: Section; quantity: number };
 type Ctx = {
   lines: CartLine[]; count: number; subtotal: number; ready: boolean;
   add: (l: Omit<CartLine, "quantity" | "lineId">, qty?: number) => void;
   setQty: (lineId: string, qty: number) => void; remove: (lineId: string) => void; clear: () => void;
 };
 const CartContext = createContext<Ctx | null>(null);
-const KEY = "bg_cart_v2";
+const KEY = "bg_cart_v3";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
@@ -21,7 +23,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { if (ready) try { localStorage.setItem(KEY, JSON.stringify(lines)); } catch { /* ignoré */ } }, [lines, ready]);
 
   const add = useCallback((l: Omit<CartLine, "quantity" | "lineId">, qty = 1) => {
-    const lineId = `${l.productId}:${l.variantId || ""}:${l.price}`;
+    const sig = (l.options || []).map((o) => `${o.groupId}.${o.itemId}.${o.amount ?? ""}`).sort().join("|");
+    const lineId = `${l.productId}:${sig}:${l.baseUnit ?? ""}`;
     setLines((prev) => {
       const found = prev.find((x) => x.lineId === lineId);
       if (found) return prev.map((x) => x.lineId === lineId ? { ...x, quantity: Math.min(30, x.quantity + qty) } : x);

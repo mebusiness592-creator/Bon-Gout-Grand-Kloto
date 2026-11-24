@@ -13,7 +13,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   const [user, s] = await Promise.all([getCurrentUser(), getSettings()]);
   await purgeOldNotifications();
   let unread = 0;
-  let notes: { _id: string; title: string; message: string; createdAt: string; read?: boolean }[] = [];
+  let notes: { _id: string; title: string; message: string; createdAt: string; read?: boolean; image?: string | null }[] = [];
   if (user) {
     try {
       const col = (await getDb()).collection("notifications");

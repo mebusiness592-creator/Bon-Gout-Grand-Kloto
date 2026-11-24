@@ -24,3 +24,15 @@ export async function getSettings(): Promise<Settings> {
     return defaultSettings;
   }
 }
+
+/** Guide de commande (menu « Guide » de l'administration) : vidéo + étapes affichées en fenêtre agrandie sur l'accueil. */
+export type Guide = { title: string; intro: string; video: string; steps: { title: string; text: string }[] };
+export const emptyGuide: Guide = { title: "Comment commander ?", intro: "", video: "", steps: [] };
+export async function getGuide(): Promise<Guide> {
+  try {
+    const doc = await (await getDb()).collection("settings").findOne({ _id: "guide" as never });
+    const { _id, ...rest } = (doc || {}) as Record<string, unknown>;
+    void _id;
+    return { ...emptyGuide, ...(rest as Partial<Guide>) };
+  } catch { return emptyGuide; }
+}

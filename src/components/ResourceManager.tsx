@@ -3,9 +3,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { ImageUploader } from "./ImageUploader";
+import { OptionGroupsEditor } from "./OptionGroupsEditor";
+import { groupsOf } from "@/lib/options";
+import type { OptionGroup } from "@/lib/types";
 import { fcfa, priceLabel, productImage } from "@/lib/pricing";
 
-export type Field = { name: string; label: string; type: "text" | "textarea" | "number" | "bool" | "select" | "images" | "videos" | "image" | "variants" | "media"; options?: { value: string; label: string }[]; required?: boolean; help?: string };
+export type Field = { name: string; label: string; type: "text" | "textarea" | "number" | "bool" | "select" | "images" | "videos" | "image" | "variants" | "groups" | "media"; options?: { value: string; label: string }[]; required?: boolean; help?: string };
 export type Col = { key: string; label: string; type?: "text" | "money" | "bool" | "image" | "map" | "media" };
 type Item = Record<string, unknown> & { _id: string };
 type Variant = { id: string; label: string; image: string; description?: string };
@@ -28,6 +31,7 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
       const cur = item ? item[f.name] : undefined;
       if (f.type === "images" || f.type === "videos") v[f.name] = Array.isArray(cur) ? cur : (item && typeof item.imageUrl === "string" && f.name === "images" ? [item.imageUrl] : []);
       else if (f.type === "variants") v[f.name] = Array.isArray(cur) ? cur : [];
+      else if (f.type === "groups") v[f.name] = item ? groupsOf(item as never) : [];
       else if (f.type === "image") v[f.name] = typeof cur === "string" ? cur : "";
       else if (f.type === "bool") v[f.name] = cur === undefined ? (v[f.name] ?? (f.name === "available")) : Boolean(cur);
       else if (f.type === "media") v[f.name] = [];
@@ -49,6 +53,7 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
       if (f.type === "number") body[f.name] = v === "" || v === null || v === undefined ? (f.required ? 0 : null) : Number(v);
       else if (f.type === "select" && !f.required) body[f.name] = v === "" ? null : v;
       else if (f.type === "variants") body[f.name] = ((v as Variant[]) || []).filter((x) => x.label.trim()).map((x) => ({ id: x.id, label: x.label.trim(), image: x.image || "", description: (x.description || "").trim() }));
+      else if (f.type === "groups") body[f.name] = ((v as OptionGroup[]) || []).map((g) => ({ ...g, label: g.label.trim(), items: g.items.filter((x) => x.label.trim()).map((x) => ({ ...x, label: x.label.trim() })) })).filter((g) => g.label && g.items.length);
       else if (f.type === "text" || f.type === "textarea") body[f.name] = typeof v === "string" ? v : "";
       else if (f.type !== "media") body[f.name] = v;
     }
@@ -122,6 +127,7 @@ export function ResourceManager({ resource, title, noun, items, fields, cols, ma
                     : f.type === "videos" ? <ImageUploader videoOnly max={4} value={(form[f.name] as string[]) || []} onChange={(v) => set(f.name, v)} />
                     : f.type === "image" ? <ImageUploader max={1} value={form[f.name] ? [String(form[f.name])] : []} onChange={(v) => set(f.name, v[0] || "")} />
                     : f.type === "media" ? <ImageUploader video max={30} value={(form.urls as string[]) || []} onChange={(v) => set("urls", v)} />
+                    : f.type === "groups" ? <OptionGroupsEditor value={(form[f.name] as OptionGroup[]) || []} onChange={(v) => set(f.name, v)} />
                     : f.type === "variants" ? (
                       <div>
                         {((form[f.name] as Variant[]) || []).map((v, idx) => (

@@ -16,10 +16,11 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const allowed = order && (order.accessToken === String(body.token || "") || (user && order.userId === user.id));
   if (!order || !allowed) return json({ error: "Commande introuvable." }, 404);
   if (order.paymentMethod !== "ussd" || order.paymentStatus !== "pending") return json({ error: "Action non applicable à cette commande." }, 400);
+  const operator = body.operator === "TMoney" || body.operator === "Flooz" ? body.operator : order.operator;
   await db.collection("orders").updateOne({ _id }, {
-    $set: { paymentStatus: "awaiting_verification" },
+    $set: { paymentStatus: "awaiting_verification", operator },
     $push: { history: { at: new Date().toISOString(), by: "client", field: "paymentStatus", from: "pending", to: "awaiting_verification" } } as never,
   });
-  await notify({ audience: "admin", title: "Paiement à vérifier", message: `Le client annonce un paiement pour ${order.reference}.`, orderId: _id.toString(), type: "payment" });
+  await notify({ audience: "admin", title: "Paiement à vérifier", message: `Le client annonce un paiement pour ${order.reference}.`, orderId: _id.toString(), type: "payment", image: (order.items?.[0] as { image?: string } | undefined)?.image || null });
   return json({ ok: true });
 }

@@ -1,21 +1,23 @@
 import Link from "next/link";
 import { getCategories, getMedia, getProducts } from "@/lib/catalog";
-import { getSettings } from "@/lib/settings";
+import { getGuide, getSettings } from "@/lib/settings";
+import { GuideButton } from "@/components/GuideButton";
 import { ProductCard } from "@/components/ProductCard";
 import { CategoryTiles } from "@/components/CategoryTiles";
 import { Slides } from "@/components/Slides";
 import { ShieldCheck, ChefHat, Leaf, Truck, Phone, MapPin, Clock } from "lucide-react";
 
 export default async function Home() {
-  const [s, cats, featured, local, localCats, heroMedia, localMedia] = await Promise.all([
-    getSettings(), getCategories("restaurant"),
+  const [s, guide, cats, featured, local, localCats, heroMedia, localMedia] = await Promise.all([
+    getSettings(), getGuide(), getCategories("restaurant"),
     getProducts({ section: "restaurant", onlyAvailable: true, limit: 8 }),
     getProducts({ section: "huile", onlyAvailable: true, limit: 4 }),
     getCategories("huile"),
     getMedia("accueil-restaurant", 10), getMedia("production-locale", 10),
   ]);
-  const hero = heroMedia.filter((m) => m.kind === "image").map((m) => m.url);
-  const lm = localMedia.filter((m) => m.kind === "image").map((m) => m.url);
+  const hero = heroMedia.map((m) => m.url);
+  const hasGuide = Boolean(guide.video) || guide.steps.length > 0;
+  const lm = localMedia.map((m) => m.url);
   return (
     <>
       <section className="hero">
@@ -28,6 +30,7 @@ export default async function Home() {
           <div className="cta">
             <Link href="/menu" className="btn btn-gold">Découvrir notre menu</Link>
             <Link href="/menu" className="btn btn-primary">Commander maintenant</Link>
+            {hasGuide && <GuideButton guide={guide} className="btn btn-ghost" label="Comment commander ?" />}
           </div>
         </div>
       </section>

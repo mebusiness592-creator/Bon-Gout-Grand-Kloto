@@ -22,7 +22,7 @@ export default async function Confirmation({ params, searchParams }: { params: P
     return <div className="container section"><h1>Commande introuvable</h1><p className="muted">Le lien est invalide ou vous n&apos;avez pas accès à cette commande.</p><Link href="/" className="btn btn-primary">Retour à l&apos;accueil</Link></div>;
   }
   const o: Order = plain(doc);
-  const code = o.paymentMethod === "ussd" ? buildUssd(o.operator, o.total, o.reference, o.phone) : null;
+  const codes = { TMoney: buildUssd("TMoney", o.total, o.reference, o.phone), Flooz: buildUssd("Flooz", o.total, o.reference, o.phone) };
   return (
     <div className="container section" style={{ maxWidth: 820 }}>
       <span className="badge ok">Commande enregistrée</span>
@@ -35,7 +35,7 @@ export default async function Confirmation({ params, searchParams }: { params: P
         <div className="total big"><span>Total</span><span>{fcfa(o.total)}</span></div>
         <p className="muted">Livraison : {o.address}{o.city ? `, ${o.city}` : ""}{o.location ? " (position GPS enregistrée)" : ""}</p>
       </div>
-      {o.paymentMethod === "ussd" && ["pending", "awaiting_verification"].includes(o.paymentStatus) && <UssdPay id={o._id} token={t || ""} code={code} instructions={s.paymentInstructions} status={o.paymentStatus} reference={o.reference} amount={o.total} />}
+      {o.paymentMethod === "ussd" && ["pending", "awaiting_verification"].includes(o.paymentStatus) && <UssdPay id={o._id} token={t || ""} codes={codes} operator={o.operator || "TMoney"} instructions={s.paymentInstructions} status={o.paymentStatus} reference={o.reference} amount={o.total} />}
       {o.paymentMethod === "delivery" && <p className="muted">Vous paierez à la réception de votre commande.</p>}
       <p style={{ marginTop: "1.5rem", display: "flex", gap: ".6rem", flexWrap: "wrap" }}><Link href="/menu" className="btn btn-primary">Continuer mes achats</Link>{user && <Link href="/mon-compte" className="btn btn-ghost" style={{ color: "var(--brown)" }}>Mes commandes</Link>}</p>
     </div>
