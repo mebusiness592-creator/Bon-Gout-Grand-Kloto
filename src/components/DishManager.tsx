@@ -1,10 +1,10 @@
 "use client";
-import "../styles/dishes.css";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ImageUploader } from "./ImageUploader";
 import { OptionGroupsEditor } from "./OptionGroupsEditor";
+import { DISH_CSS } from "./OrderBlocks";
 import { groupsOf } from "@/lib/options";
 import { priceLabel, productImage } from "@/lib/pricing";
 import type { OptionGroup, OptionItem, Product } from "@/lib/types";
@@ -149,6 +149,7 @@ export function DishManager({ items, categories }: { items: Product[]; categorie
 
   return (
     <div>
+      <style dangerouslySetInnerHTML={{ __html: DISH_CSS }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: ".6rem", flexWrap: "wrap" }}>
         <h1 style={{ fontSize: "1.7rem", margin: 0 }}>Gestion du restaurant</h1>
         <button className="btn btn-primary btn-sm" onClick={() => open()}><Plus size={16} /> Ajouter un plat</button>
