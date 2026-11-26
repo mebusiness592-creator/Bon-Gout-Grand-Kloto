@@ -8,6 +8,7 @@ export function ProductCard({ p }: { p: Product }) {
   const img = productImage(p);
   const href = (p.section === "restaurant" ? "/menu/" : "/produits/") + p._id;
   const out = !p.available || (typeof p.stock === "number" && p.stock <= 0);
+  const hasVariants = groupsOf(p).some((g) => g.role === "variant" && g.items.length > 0);
   const needsChoice = isRange(p) || groupsOf(p).length > 0;
   return (
     <article className="card">
@@ -19,7 +20,7 @@ export function ProductCard({ p }: { p: Product }) {
         <h3><Link href={href}>{p.name}</Link></h3>
         {p.format && <span className="pill">{p.format}</span>}
         {p.description && <p className="muted clamp">{p.description}</p>}
-        <div className="price-row"><strong>{priceLabel(p)}</strong>{isPromo(p) && <s>{fcfa(p.price)}</s>}</div>
+        <div className="price-row"><strong>{hasVariants ? "Prix selon variante" : priceLabel(p)}</strong>{!hasVariants && isPromo(p) && <s>{fcfa(p.price)}</s>}</div>
         <span className={out ? "badge off" : "badge ok"}>{out ? "Indisponible" : "Disponible"}</span>
         {out ? <AddToCart id={p._id} name={p.name} price={effectivePrice(p)} section={p.section} available={false} />
           : needsChoice ? <Link href={href} className="btn btn-primary">Choisir &amp; commander</Link>

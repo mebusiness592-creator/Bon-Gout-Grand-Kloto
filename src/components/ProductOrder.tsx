@@ -14,7 +14,8 @@ export function ProductOrder({ p }: { p: Product }) {
   const rank = (g: OptionGroup) => (g.role === "variant" ? 0 : g.role === "sauce" ? 1 : g.role === "extra" ? 2 : 3);
   const groups = [...groupsOf(p)].sort((a, b) => rank(a) - rank(b));
   const vg = groups.find((g) => g.role === "variant");
-  const range = isRange(p);
+  const hasVariants = Boolean(vg && vg.items.length > 0);
+  const range = !hasVariants && isRange(p);
   const media = [...(p.images?.length ? p.images : p.imageUrl ? [p.imageUrl] : []), ...(p.videos || [])];
   const [sel, setSel] = useState<Sel>({});
   const [amount, setAmount] = useState(String(p.price));
@@ -25,10 +26,10 @@ export function ProductOrder({ p }: { p: Product }) {
   const out = !p.available || (typeof p.stock === "number" && p.stock <= 0);
 
   const amountOf = (it: OptionItem, text: string) => { const k = itemKind(it); return k === "none" ? 0 : k === "fixed" ? (it.priceMin as number) : Number(text); };
-  // La variante choisie, si elle a un prix, REMPLACE le prix du plat ; sinon on utilise le prix (ou la fourchette) du plat.
+  // Avec des variantes, seul le prix de la variante choisie est utilisé.
   const vItem = vg?.items.find((it) => sel[vg.id]?.[it.id] !== undefined);
-  const vPriced = Boolean(vg && vItem && itemKind(vItem) !== "none");
-  const dishUnit = vPriced && vg && vItem ? amountOf(vItem, sel[vg.id][vItem.id]) : range ? Number(amount) : effectivePrice(p);
+  const vPriced = Boolean(hasVariants && vItem && itemKind(vItem) !== "none");
+  const dishUnit = hasVariants ? (vPriced && vg && vItem ? amountOf(vItem, sel[vg.id][vItem.id]) : 0) : range ? Number(amount) : effectivePrice(p);
   const extras = groups.reduce((s, g) => (g.role === "variant" ? s : s + g.items.reduce((t, it) => { const t0 = sel[g.id]?.[it.id]; return t0 === undefined ? t : t + (amountOf(it, t0) || 0); }, 0)), 0);
   const unit = (Number.isFinite(dishUnit) ? dishUnit : 0) + extras;
 
@@ -44,7 +45,8 @@ export function ProductOrder({ p }: { p: Product }) {
 
   function click() {
     setMsg("");
-    if (range && !vPriced && (!Number.isInteger(dishUnit) || dishUnit < p.price || dishUnit > (p.priceMax as number))) return setMsg(`Entrez un montant entre ${fcfa(p.price)} et ${fcfa(p.priceMax as number)}.`);
+    if (hasVariants && (!vItem || !vPriced)) return setMsg("Veuillez choisir une variante dont le prix est correctement configuré.");
+    if (range && (!Number.isInteger(dishUnit) || dishUnit < p.price || dishUnit > (p.priceMax as number))) return setMsg(`Entrez un montant entre ${fcfa(p.price)} et ${fcfa(p.priceMax as number)}.`);
     const options: CartOption[] = [];
     for (const g of groups) {
       const chosen = g.items.filter((it) => sel[g.id]?.[it.id] !== undefined);
@@ -56,7 +58,7 @@ export function ProductOrder({ p }: { p: Product }) {
       }
     }
     const summary = options.map((o) => (o.amount ? `${o.label} (${fcfa(o.amount)})` : o.label)).join(" · ");
-    add({ productId: p._id, name: p.name, price: unit, baseUnit: range && !vPriced ? dishUnit : undefined, image: media.find((u) => !/\.(mp4|webm|mov)(\?.*)?$/i.test(u)), section: p.section, options, variantLabel: summary || undefined }, qty);
+    add({ productId: p._id, name: p.name, price: unit, baseUnit: range && !hasVariants ? dishUnit : undefined, image: media.find((u) => !/\.(mp4|webm|mov)(\?.*)?$/i.test(u)), section: p.section, options, variantLabel: summary || undefined }, qty);
     setDone(true); setTimeout(() => setDone(false), 1800);
   }
   const PD_CSS = `.pd{display:grid;gap:1rem}
@@ -98,7 +100,7 @@ export function ProductOrder({ p }: { p: Product }) {
       <div className="pd-main">
         <h1 className="pd-title">{p.name}</h1>
         <div className="pd-meta">
-          <strong className="pd-price">{priceLabel(p)}</strong>{isPromo(p) && <s className="muted">{fcfa(p.price)}</s>}
+          <strong className="pd-price">{hasVariants ? "Prix selon variante" : priceLabel(p)}</strong>{!hasVariants && isPromo(p) && <s className="muted">{fcfa(p.price)}</s>}
           <span className={out ? "badge off" : "badge ok"}>{out ? "Indisponible" : "Disponible"}</span>{p.format && <span className="pill">{p.format}</span>}
         </div>
         {p.description && <div><p className={`pd-desc ${descOpen ? "open" : ""}`}>{p.description}</p>{longDesc && <button type="button" className="pd-more" onClick={() => setDescOpen(!descOpen)}>{descOpen ? "Réduire" : "Lire la suite"}</button>}</div>}
@@ -108,7 +110,7 @@ export function ProductOrder({ p }: { p: Product }) {
           {media[0] && !/\.(mp4|webm|mov)(\?.*)?$/i.test(media[0]) ? <img src={media[0]} alt="" /> : <span className="ph">🍽️</span>}
           <span><strong>✓ {p.name}</strong><small>Sélectionné automatiquement — choisissez la quantité en bas</small></span>
         </div>
-        {range && !vPriced && <div className="pdg" style={{ padding: ".7rem .85rem" }}><label htmlFor="amt" style={{ marginTop: 0 }}>Montant souhaité pour le plat (FCFA) — entre {fcfa(p.price)} et {fcfa(p.priceMax as number)}</label>
+        {range && <div className="pdg" style={{ padding: ".7rem .85rem" }}><label htmlFor="amt" style={{ marginTop: 0 }}>Montant souhaité pour le plat (FCFA) — entre {fcfa(p.price)} et {fcfa(p.priceMax as number)}</label>
           <input id="amt" type="number" inputMode="numeric" min={p.price} max={p.priceMax as number} step={50} value={amount} onChange={(e) => setAmount(e.target.value)} /></div>}
 
         {groups.map((g, gi) => {

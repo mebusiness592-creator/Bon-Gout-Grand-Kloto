@@ -25,12 +25,13 @@ function toForm(item?: Product): Form {
   const groups = item ? groupsOf(item) : [];
   const legacy = groups.find((g) => g.id === "legacy"); // anciennes « variantes »
   const find = (r: string) => groups.find((g) => g.role === r)?.items || [];
+  const hasVariants = find("variant").length > 0 || Boolean(legacy?.items.length);
   const imgs = item ? (item.images?.length ? item.images : item.imageUrl ? [item.imageUrl] : []) : [];
   return {
     name: item?.name || "", description: item?.description || "", categoryId: item?.categoryId || "",
-    priceMin: item ? String(item.price ?? "") : "", priceMax: item?.priceMax ? String(item.priceMax) : "", promoPrice: item?.promoPrice ? String(item.promoPrice) : "",
+    priceMin: item && !hasVariants ? String(item.price ?? "") : "", priceMax: item && !hasVariants && item.priceMax ? String(item.priceMax) : "", promoPrice: item && !hasVariants && item.promoPrice ? String(item.promoPrice) : "",
     main: imgs[0] || "", gallery: imgs.slice(1), videos: item?.videos || [],
-    variants: [...find("variant"), ...(legacy ? legacy.items : [])],
+    variants: find("variant").length ? find("variant") : (legacy ? legacy.items : []),
     sauces: find("sauce").map((i) => ({ ...i, free: i.free ?? typeof i.priceMin !== "number" })),
     extras: find("extra"),
     others: groups.filter((g) => !g.role && g.id !== "legacy"),
@@ -75,10 +76,10 @@ function ItemsEditor({ mode, items, onChange, addLabel }: { mode: Mode; items: O
             {showPrice && (
               <div className="dpricebox">
                 <div className="dgrid two">
-                  <div><label>Prix minimum (FCFA){mode === "variant" ? " — facultatif" : ""}</label><input type="number" min={0} step={50} value={it.priceMin ?? ""} onChange={(e) => set(i, { priceMin: num(e.target.value) })} /></div>
+                  <div><label>Prix minimum (FCFA){mode === "variant" ? " *" : ""}</label><input type="number" min={0} step={50} value={it.priceMin ?? ""} onChange={(e) => set(i, { priceMin: num(e.target.value) })} required={mode === "variant" || mode === "extra" || (mode === "sauce" && it.free === false)} /></div>
                   <div><label>Prix maximum (FCFA)</label><input type="number" min={0} step={50} value={it.priceMax ?? ""} onChange={(e) => set(i, { priceMax: num(e.target.value) })} /></div>
                 </div>
-                <small className="muted">{mode === "variant" ? "Vide = prix du plat. Sinon le client indique son montant entre le minimum et le maximum de cette variante." : "Le client indique le montant qu'il veut payer, entre le minimum et le maximum. Un seul prix = prix fixe."}</small>
+                <small className="muted">{mode === "variant" ? "Chaque variante doit avoir son propre prix. Le prix du plat principal ne sera plus utilisé." : "Le client indique le montant qu'il veut payer, entre le minimum et le maximum. Un seul prix = prix fixe."}</small>
               </div>)}
             <label>Image</label>
             <ImageUploader max={1} value={it.image ? [it.image] : []} onChange={(u) => set(i, { image: u[0] || "" })} />
@@ -101,15 +102,17 @@ export function DishManager({ items, categories }: { items: Product[]; categorie
   function check(x: Form): string {
     if (x.name.trim().length < 2) return "Indiquez le nom du plat.";
     const mn = num(x.priceMin), mx = num(x.priceMax);
-    if (mn === null) return "Indiquez le prix minimum du plat.";
-    if (mx !== null && mx <= mn) return "Le prix maximum doit être supérieur au prix minimum (ou laissez-le vide pour un prix fixe).";
+    if (!x.variants.length) {
+      if (mn === null) return "Indiquez le prix minimum du plat.";
+      if (mx !== null && mx <= mn) return "Le prix maximum doit être supérieur au prix minimum (ou laissez-le vide pour un prix fixe).";
+    }
     const rng = (it: OptionItem, req: boolean, what: string) => {
       if (!it.label.trim()) return `${what} : un nom est manquant.`;
       if (req && typeof it.priceMin !== "number") return `« ${it.label} » : indiquez le prix minimum et maximum.`;
       if (typeof it.priceMin === "number" && typeof it.priceMax === "number" && it.priceMax < it.priceMin) return `« ${it.label} » : le maximum doit être supérieur ou égal au minimum.`;
       return "";
     };
-    for (const it of x.variants) { const e = rng(it, false, "Variante"); if (e) return e; }
+    for (const it of x.variants) { const e = rng(it, true, "Variante"); if (e) return e; }
     for (const it of x.sauces) { const e = rng(it, it.free === false, "Sauce"); if (e) return e; }
     for (const it of x.extras) { const e = rng(it, true, "Viande / poisson / accompagnement"); if (e) return e; }
     return "";
@@ -126,7 +129,8 @@ export function DishManager({ items, categories }: { items: Product[]; categorie
     const mn = num(f.priceMin) as number, mx = num(f.priceMax);
     const body = {
       name: f.name.trim(), description: f.description.trim(), categoryId: f.categoryId || null,
-      priceText: mx !== null && mx > mn ? `${mn}-${mx}` : String(mn), promoPrice: num(f.promoPrice),
+      priceText: f.variants.length ? "0" : (mx !== null && mx > mn ? `${mn}-${mx}` : String(mn)),
+      promoPrice: f.variants.length ? null : num(f.promoPrice),
       images: [f.main, ...f.gallery].filter(Boolean), videos: f.videos, mealTime: f.mealTime || null,
       optionGroups: groups, available: f.available, featured: f.featured,
     };
@@ -166,7 +170,7 @@ export function DishManager({ items, categories }: { items: Product[]; categorie
                   <td>{productImage(it) ? <img src={productImage(it)} alt="" /> : "—"}</td>
                   <td><strong>{it.name}</strong><div className="dchips">{n("variant") > 0 && <span className="dchip">{n("variant")} variante(s)</span>}{n("sauce") > 0 && <span className="dchip">{n("sauce")} sauce(s)</span>}{n("extra") > 0 && <span className="dchip">{n("extra")} accompagnement(s)</span>}</div></td>
                   <td>{(it.categoryId && catName[it.categoryId]) || it.category || "—"}</td>
-                  <td>{priceLabel(it)}</td><td>{it.available ? "Oui" : "Non"}</td>
+                  <td>{g.some((x) => x.role === "variant" && x.items.length > 0) ? "Selon variante" : priceLabel(it)}</td><td>{it.available ? "Oui" : "Non"}</td>
                   <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                     <button className="btn btn-sm btn-light" onClick={() => toggle(it)}>{it.available ? "Désactiver" : "Activer"}</button>{" "}
                     <button className="btn btn-sm btn-light" aria-label="Modifier" onClick={() => open(it)}><Pencil size={14} /></button>{" "}
@@ -189,12 +193,14 @@ export function DishManager({ items, categories }: { items: Product[]; categorie
                 <label htmlFor="d-desc">Description</label><textarea id="d-desc" rows={3} value={f.description} maxLength={2000} onChange={(e) => set({ description: e.target.value })} />
                 <label htmlFor="d-cat">Spécialité</label>
                 <select id="d-cat" value={f.categoryId} onChange={(e) => set({ categoryId: e.target.value })}><option value="">—</option>{categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}</select>
-                <div className="dgrid three">
-                  <div><label htmlFor="d-min">Prix minimum (FCFA) *</label><input id="d-min" type="number" min={0} step={50} value={f.priceMin} onChange={(e) => set({ priceMin: e.target.value })} required /></div>
-                  <div><label htmlFor="d-max">Prix maximum (FCFA)</label><input id="d-max" type="number" min={0} step={50} value={f.priceMax} onChange={(e) => set({ priceMax: e.target.value })} /></div>
-                  <div><label htmlFor="d-promo">Prix promotionnel</label><input id="d-promo" type="number" min={0} step={50} value={f.promoPrice} onChange={(e) => set({ promoPrice: e.target.value })} /></div>
-                </div>
-                <small className="muted">Maximum vide = prix fixe. Avec un maximum, le client indique son montant entre les deux (la promotion ne s&apos;applique qu&apos;aux prix fixes).</small>
+                {f.variants.length === 0 ? <>
+                  <div className="dgrid three">
+                    <div><label htmlFor="d-min">Prix minimum (FCFA) *</label><input id="d-min" type="number" min={0} step={50} value={f.priceMin} onChange={(e) => set({ priceMin: e.target.value })} required /></div>
+                    <div><label htmlFor="d-max">Prix maximum (FCFA)</label><input id="d-max" type="number" min={0} step={50} value={f.priceMax} onChange={(e) => set({ priceMax: e.target.value })} /></div>
+                    <div><label htmlFor="d-promo">Prix promotionnel</label><input id="d-promo" type="number" min={0} step={50} value={f.promoPrice} onChange={(e) => set({ promoPrice: e.target.value })} /></div>
+                  </div>
+                  <small className="muted">Maximum vide = prix fixe. Avec un maximum, le client indique son montant entre les deux (la promotion ne s&apos;applique qu&apos;aux prix fixes).</small>
+                </> : <p className="muted" style={{ margin: ".5rem 0" }}>Ce plat possède des variantes : le prix du plat principal est désactivé. Chaque variante doit avoir son propre prix.</p>}
               </Section>
 
               <Section n={2} title="Photos et vidéo" hint="Image principale, galerie, vidéo facultative" count={(f.main ? 1 : 0) + f.gallery.length + f.videos.length} open>
@@ -208,8 +214,8 @@ export function DishManager({ items, categories }: { items: Product[]; categorie
               </Section>
 
               <Section n={3} title="Variantes du plat" hint="Ex. : Fufu → igname, manioc, plantain" count={f.variants.length} open={f.variants.length > 0}>
-                <p className="muted" style={{ margin: ".6rem 0 0" }}>Le client choisit une variante. Chaque variante a son nom, sa description, son image et, si besoin, son intervalle de prix (sinon le prix du plat s&apos;applique).</p>
-                <ItemsEditor mode="variant" items={f.variants} onChange={(v) => set({ variants: v })} addLabel="Ajouter une variante" />
+                <p className="muted" style={{ margin: ".6rem 0 0" }}>Dès que vous ajoutez une première variante, le prix du plat principal est automatiquement supprimé. Chaque variante doit avoir son propre prix minimum et peut avoir un prix maximum.</p>
+                <ItemsEditor mode="variant" items={f.variants} onChange={(v) => set({ variants: v, ...(v.length ? { priceMin: "", priceMax: "", promoPrice: "" } : {}) })} addLabel="Ajouter une variante" />
               </Section>
 
               <Section n={4} title="Sauces" hint="Autant de sauces que vous voulez — le client peut en choisir plusieurs" count={f.sauces.length} open={f.sauces.length > 0}>

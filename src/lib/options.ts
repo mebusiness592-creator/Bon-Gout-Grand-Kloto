@@ -4,7 +4,7 @@ import type { OptionGroup, OptionItem, Product } from "./types";
 export function groupsOf(p: Pick<Product, "optionGroups" | "variants">): OptionGroup[] {
   if (p.optionGroups?.length) return p.optionGroups;
   if (p.variants?.length) {
-    return [{ id: "legacy", label: "Votre choix", required: true, multiple: false, items: p.variants.map((v) => ({ id: v.id, label: v.label, image: v.image, description: v.description, priceMin: null, priceMax: null })) }];
+    return [{ id: "legacy", label: "Votre choix", role: "variant", required: true, multiple: false, items: p.variants.map((v) => ({ id: v.id, label: v.label, image: v.image, description: v.description, priceMin: null, priceMax: null })) }];
   }
   return [];
 }

@@ -87,8 +87,21 @@ export async function prepare(name: string, body: unknown, mode: "create" | "upd
         if (g.role === "extra" && min === null) return { error: `« ${it.label} » : indiquez le prix minimum et maximum.` };
         it.priceMin = min; it.priceMax = max; it.image = it.image || ""; it.description = it.description || "";
       }
+      const variantGroups = groups.filter((g) => g.role === "variant" && g.items.length > 0);
+      for (const group of variantGroups) {
+        for (const item of group.items) {
+          if (typeof item.priceMin !== "number") return { error: `« ${item.label} » : indiquez le prix minimum de cette variante.` };
+          if (typeof item.priceMax === "number" && item.priceMax < item.priceMin) return { error: `« ${item.label} » : le prix maximum doit être supérieur ou égal au prix minimum.` };
+        }
+      }
       doc.optionGroups = groups.map((g) => ({ id: g.id, label: g.label, ...(g.role ? { role: g.role } : {}), required: Boolean(g.required), multiple: g.role === "variant" ? false : Boolean(g.multiple), items: g.items }));
       doc.variants = []; // l'ancien système de variantes est remplacé par les groupes d'accompagnements
+      if (variantGroups.length > 0) {
+        // Dès qu'il existe des variantes actives, le prix du plat parent est neutralisé.
+        doc.price = 0;
+        doc.priceMax = null;
+        doc.promoPrice = null;
+      }
     }
     if ("categoryId" in doc) {
       if (doc.categoryId) {
