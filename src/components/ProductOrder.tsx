@@ -11,7 +11,9 @@ type Sel = Record<string, Record<string, string>>; // groupe -> accompagnement -
 
 export function ProductOrder({ p }: { p: Product }) {
   const { add } = useCart();
-  const groups = groupsOf(p);
+  const rank = (g: OptionGroup) => (g.role === "variant" ? 0 : g.role === "sauce" ? 1 : g.role === "extra" ? 2 : 3);
+  const groups = [...groupsOf(p)].sort((a, b) => rank(a) - rank(b));
+  const vg = groups.find((g) => g.role === "variant");
   const range = isRange(p);
   const media = [...(p.images?.length ? p.images : p.imageUrl ? [p.imageUrl] : []), ...(p.videos || [])];
   const [sel, setSel] = useState<Sel>({});
@@ -19,11 +21,14 @@ export function ProductOrder({ p }: { p: Product }) {
   const [qty, setQty] = useState(1);
   const [msg, setMsg] = useState(""); const [done, setDone] = useState(false);
   const out = !p.available || (typeof p.stock === "number" && p.stock <= 0);
-  const baseUnit = range ? Number(amount) : effectivePrice(p);
 
   const amountOf = (it: OptionItem, text: string) => { const k = itemKind(it); return k === "none" ? 0 : k === "fixed" ? (it.priceMin as number) : Number(text); };
-  const extras = groups.reduce((s, g) => s + g.items.reduce((t, it) => { const t0 = sel[g.id]?.[it.id]; return t0 === undefined ? t : t + (amountOf(it, t0) || 0); }, 0), 0);
-  const unit = (Number.isFinite(baseUnit) ? baseUnit : 0) + extras;
+  // La variante choisie, si elle a un prix, REMPLACE le prix du plat ; sinon on utilise le prix (ou la fourchette) du plat.
+  const vItem = vg?.items.find((it) => sel[vg.id]?.[it.id] !== undefined);
+  const vPriced = Boolean(vg && vItem && itemKind(vItem) !== "none");
+  const dishUnit = vPriced && vg && vItem ? amountOf(vItem, sel[vg.id][vItem.id]) : range ? Number(amount) : effectivePrice(p);
+  const extras = groups.reduce((s, g) => (g.role === "variant" ? s : s + g.items.reduce((t, it) => { const t0 = sel[g.id]?.[it.id]; return t0 === undefined ? t : t + (amountOf(it, t0) || 0); }, 0)), 0);
+  const unit = (Number.isFinite(dishUnit) ? dishUnit : 0) + extras;
 
   function toggle(g: OptionGroup, it: OptionItem) {
     setSel((prev) => {
@@ -37,7 +42,7 @@ export function ProductOrder({ p }: { p: Product }) {
 
   function click() {
     setMsg("");
-    if (range && (!Number.isInteger(baseUnit) || baseUnit < p.price || baseUnit > (p.priceMax as number))) return setMsg(`Entrez un montant entre ${fcfa(p.price)} et ${fcfa(p.priceMax as number)}.`);
+    if (range && !vPriced && (!Number.isInteger(dishUnit) || dishUnit < p.price || dishUnit > (p.priceMax as number))) return setMsg(`Entrez un montant entre ${fcfa(p.price)} et ${fcfa(p.priceMax as number)}.`);
     const options: CartOption[] = [];
     for (const g of groups) {
       const chosen = g.items.filter((it) => sel[g.id]?.[it.id] !== undefined);
@@ -49,7 +54,7 @@ export function ProductOrder({ p }: { p: Product }) {
       }
     }
     const summary = options.map((o) => (o.amount ? `${o.label} (${fcfa(o.amount)})` : o.label)).join(" · ");
-    add({ productId: p._id, name: p.name, price: unit, baseUnit: range ? baseUnit : undefined, image: media.find((u) => !/\.(mp4|webm|mov)(\?.*)?$/i.test(u)), section: p.section, options, variantLabel: summary || undefined }, qty);
+    add({ productId: p._id, name: p.name, price: unit, baseUnit: range && !vPriced ? dishUnit : undefined, image: media.find((u) => !/\.(mp4|webm|mov)(\?.*)?$/i.test(u)), section: p.section, options, variantLabel: summary || undefined }, qty);
     setDone(true); setTimeout(() => setDone(false), 1800);
   }
   return (
@@ -71,14 +76,14 @@ export function ProductOrder({ p }: { p: Product }) {
             {media[0] && !/\.(mp4|webm|mov)(\?.*)?$/i.test(media[0]) ? <img src={media[0]} alt="" /> : <span className="ph">🍽️</span>}
             <span className="acc-txt"><strong>{p.name}</strong><small>Sélectionné automatiquement — choisissez la quantité ci-dessous</small></span>
           </div>
-          {range && <div className="acc-amt"><label htmlFor="amt">Votre montant (FCFA) — entre {fcfa(p.price)} et {fcfa(p.priceMax as number)}</label>
+          {range && !vPriced && <div className="acc-amt"><label htmlFor="amt">Indiquez le montant souhaité pour le plat (FCFA) — entre {fcfa(p.price)} et {fcfa(p.priceMax as number)}</label>
             <input id="amt" type="number" inputMode="numeric" min={p.price} max={p.priceMax as number} step={50} value={amount} onChange={(e) => setAmount(e.target.value)} /></div>}
         </div>
 
         {groups.map((g) => (
           <section key={g.id} style={{ marginTop: "1rem" }}>
             <h3 style={{ marginBottom: ".2rem" }}>{g.label} <span className={g.required ? "badge promo" : "badge ok"} style={{ fontSize: ".7rem" }}>{g.required ? "Obligatoire" : "Facultatif"}</span></h3>
-            <small className="muted">{g.multiple ? "Plusieurs choix possibles" : "Un seul choix"}</small>
+            <small className="muted">{g.role === "variant" ? "Choisissez votre variante" : g.multiple ? "Plusieurs choix possibles" : "Un seul choix"}</small>
             <div style={{ display: "grid", gap: ".5rem", marginTop: ".4rem" }}>
               {g.items.map((it) => {
                 const on = sel[g.id]?.[it.id] !== undefined; const k = itemKind(it);
@@ -88,7 +93,7 @@ export function ProductOrder({ p }: { p: Product }) {
                       <span className={`acc-ind ${g.multiple ? "sq" : ""}`}>{on ? "✓" : ""}</span>
                       {it.image ? <img src={it.image} alt={it.label} loading="lazy" /> : <span className="ph">🍽️</span>}
                       <span className="acc-txt"><strong>{it.label}</strong>{it.description && <small>{it.description}</small>}
-                        <small>{k === "none" ? "Inclus" : k === "fixed" ? `+ ${fcfa(it.priceMin as number)}` : `Vous choisissez : de ${fcfa(it.priceMin as number)} à ${fcfa(it.priceMax as number)}`}</small></span>
+                        <small>{k === "none" ? (g.role === "sauce" ? "Gratuite" : "Inclus") : k === "fixed" ? `${g.role === "variant" ? "" : "+ "}${fcfa(it.priceMin as number)}` : `Vous choisissez : de ${fcfa(it.priceMin as number)} à ${fcfa(it.priceMax as number)}`}</small></span>
                     </button>
                     {on && k === "range" && <div className="acc-amt"><label>Montant pour « {it.label} » (FCFA)</label>
                       <input type="number" inputMode="numeric" min={it.priceMin as number} max={it.priceMax as number} step={50} value={sel[g.id][it.id]} onChange={(e) => setAmt(g, it, e.target.value)} /></div>}

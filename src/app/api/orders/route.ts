@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
       const picked = l.options || [];
       const chosen: OrderOption[] = [];
       let extras = 0;
+      let variantAmount: number | undefined; // montant de la variante choisie : il REMPLACE le prix du plat
       for (const o of picked) {
         const g = groups.find((x) => x.id === o.groupId);
         const it = g?.items.find((x) => x.id === o.itemId);
@@ -74,8 +75,12 @@ export async function POST(req: NextRequest) {
           if (o.amount === undefined || o.amount < (it.priceMin as number) || o.amount > (it.priceMax as number)) return json({ error: `Montant invalide pour « ${it.label} » (entre ${it.priceMin} et ${it.priceMax} FCFA).` }, 400);
           amount = o.amount;
         }
-        extras += amount ?? 0;
-        chosen.push({ groupId: g.id, groupLabel: g.label, itemId: it.id, label: it.label, image: it.image || null, ...(amount === undefined ? {} : { amount }) });
+        if (g.role === "variant" && amount !== undefined) variantAmount = amount; else extras += amount ?? 0;
+        chosen.push({
+          groupId: g.id, groupLabel: g.label, itemId: it.id, label: it.label, ...(g.role ? { role: g.role } : {}),
+          ...(g.role === "sauce" && amount === undefined ? { free: true } : {}), description: it.description || null, image: it.image || null,
+          ...(amount === undefined ? {} : { amount }),
+        });
       }
       for (const g of groups) {
         const n = chosen.filter((c) => c.groupId === g.id).length;
@@ -86,13 +91,14 @@ export async function POST(req: NextRequest) {
       const min = Number(p.price);
       const max = typeof p.priceMax === "number" ? p.priceMax : null;
       let unit: number;
-      if (max && max > min) {
+      if (variantAmount !== undefined) unit = variantAmount;
+      else if (max && max > min) {
         if (l.unitPrice === undefined || l.unitPrice < min || l.unitPrice > max) return json({ error: `Montant invalide pour « ${p.name} » (entre ${min} et ${max} FCFA).` }, 400);
         unit = l.unitPrice;
       } else unit = effectivePrice({ price: min, promoPrice: p.promoPrice });
       items.push({
         productId: l.productId, options: chosen, variantLabel: summary || null, name: p.name, section: p.section,
-        quantity: l.quantity, unitPrice: unit + extras, image: p.images?.[0] || p.imageUrl || null,
+        quantity: l.quantity, dishAmount: unit, unitPrice: unit + extras, image: p.images?.[0] || p.imageUrl || null,
       });
       qtyByProduct.set(l.productId, (qtyByProduct.get(l.productId) || 0) + l.quantity);
     }
