@@ -7,6 +7,17 @@ import { CategoryTiles } from "@/components/CategoryTiles";
 import { Slides } from "@/components/Slides";
 import { ShieldCheck, ChefHat, Leaf, Truck, Phone, MapPin, Clock } from "lucide-react";
 
+/** Bannière réduite (surtout sur Android) + diaporama des plats sur l'accueil. */
+const HOME_CSS = `.hero.hero-compact .in{padding:clamp(24px,5vw,64px) 0}
+.hero.hero-compact h1{font-size:clamp(1.45rem,5.2vw,2.5rem);margin:0 0 .3rem}
+.hero.hero-compact p{font-size:.95rem;margin:.15rem 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hero.hero-compact .tag{display:none}
+.hero.hero-compact .cta{margin-top:.8rem;gap:.45rem}
+.hero.hero-compact .cta .btn{padding:.5rem .95rem;font-size:.84rem}
+@media(min-width:700px){.hero.hero-compact .tag{display:inline-flex}.hero.hero-compact p{-webkit-line-clamp:3;font-size:1.02rem}.hero.hero-compact .cta .btn{padding:.7rem 1.3rem;font-size:.92rem}}
+.card .card-link{position:absolute;inset:0;z-index:2}.card .badge.promo{z-index:3}
+.card .dots{bottom:6px;gap:5px}.card .dots button{width:7px;height:7px}.card .dots button.on{width:16px}`;
+
 export default async function Home() {
   const [s, guide, cats, featured, local, localCats, heroMedia, localMedia] = await Promise.all([
     getSettings(), getGuide(), getCategories("restaurant"),
@@ -20,7 +31,8 @@ export default async function Home() {
   const lm = localMedia.map((m) => m.url);
   return (
     <>
-      <section className="hero">
+      <style dangerouslySetInnerHTML={{ __html: HOME_CSS }} />
+      <section className="hero hero-compact">
         <Slides images={hero} />
         {hero.length > 0 && <div className="shade" />}
         <div className="container in">
@@ -42,7 +54,7 @@ export default async function Home() {
 
       <section className="section container" style={{ paddingTop: cats.length ? 0 : undefined }}>
         <div className="center"><span className="eyebrow">Plats du moment</span><h2>Nos plats</h2></div>
-        {featured.length ? <div className="grid">{featured.map((p) => <ProductCard key={p._id} p={p} />)}</div>
+        {featured.length ? <div className="grid">{featured.map((p) => <ProductCard key={p._id} p={p} slideshow />)}</div>
           : <p className="center muted">Le menu sera bientôt disponible.</p>}
         <p className="center" style={{ marginTop: "1.5rem" }}><Link href="/menu" className="btn btn-ghost" style={{ color: "var(--brown)" }}>Voir tout le menu</Link></p>
       </section>
@@ -58,7 +70,7 @@ export default async function Home() {
           {lm.length > 0 ? <div className="slidebox"><Slides images={lm} /></div>
             : localCats.length > 0 ? <CategoryTiles cats={localCats.slice(0, 4)} base="/produits/categorie/" leaf /> : null}
         </div>
-        {local.length > 0 && <div className="container grid" style={{ marginTop: "1.5rem" }}>{local.map((p) => <ProductCard key={p._id} p={p} />)}</div>}
+        {local.length > 0 && <div className="container grid" style={{ marginTop: "1.5rem" }}>{local.map((p) => <ProductCard key={p._id} p={p} slideshow />)}</div>}
       </section>
 
       <section className="section container">

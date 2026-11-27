@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Check, ChevronDown, ShoppingBasket } from "lucide-react";
+import { Check, ShoppingBasket } from "lucide-react";
 import { useCart, type CartOption } from "./CartProvider";
 import { Slides } from "./Slides";
 import type { OptionGroup, OptionItem, Product } from "@/lib/types";
@@ -22,7 +22,7 @@ export function ProductOrder({ p }: { p: Product }) {
   const [qty, setQty] = useState(1);
   const [msg, setMsg] = useState(""); const [done, setDone] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
-  const [openG, setOpenG] = useState<Record<string, boolean>>({});
+  const [flash, setFlash] = useState<string | null>(null);
   const out = !p.available || (typeof p.stock === "number" && p.stock <= 0);
 
   const amountOf = (it: OptionItem, text: string) => { const k = itemKind(it); return k === "none" ? 0 : k === "fixed" ? (it.priceMin as number) : Number(text); };
@@ -43,17 +43,24 @@ export function ProductOrder({ p }: { p: Product }) {
   }
   function setAmt(g: OptionGroup, it: OptionItem, v: string) { setSel((prev) => ({ ...prev, [g.id]: { ...(prev[g.id] || {}), [it.id]: v } })); }
 
+  // Affiche l'erreur ET fait défiler la page jusqu'au groupe concerné (surligné quelques secondes).
+  function fail(m: string, id?: string) {
+    setMsg(m); setFlash(id || null);
+    setTimeout(() => document.getElementById(id ? `grp-${id}` : "pd-msg")?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+    setTimeout(() => setFlash(null), 2600);
+  }
+
   function click() {
     setMsg("");
-    if (hasVariants && (!vItem || !vPriced)) return setMsg("Veuillez choisir une variante dont le prix est correctement configuré.");
-    if (range && (!Number.isInteger(dishUnit) || dishUnit < p.price || dishUnit > (p.priceMax as number))) return setMsg(`Entrez un montant entre ${fcfa(p.price)} et ${fcfa(p.priceMax as number)}.`);
+    if (hasVariants && (!vItem || !vPriced)) return fail("Veuillez choisir une variante dont le prix est correctement configuré.", vg?.id);
+    if (range && (!Number.isInteger(dishUnit) || dishUnit < p.price || dishUnit > (p.priceMax as number))) return fail(`Entrez un montant entre ${fcfa(p.price)} et ${fcfa(p.priceMax as number)}.`, "dish");
     const options: CartOption[] = [];
     for (const g of groups) {
       const chosen = g.items.filter((it) => sel[g.id]?.[it.id] !== undefined);
-      if (g.required && !chosen.length) return setMsg(`Veuillez choisir : ${g.label}.`);
+      if (g.required && !chosen.length) return fail(`Veuillez choisir : ${g.label}.`, g.id);
       for (const it of chosen) {
         const k = itemKind(it); const a = amountOf(it, sel[g.id][it.id]);
-        if (k === "range" && (!Number.isInteger(a) || a < (it.priceMin as number) || a > (it.priceMax as number))) return setMsg(`« ${it.label} » : entrez un montant entre ${fcfa(it.priceMin as number)} et ${fcfa(it.priceMax as number)}.`);
+        if (k === "range" && (!Number.isInteger(a) || a < (it.priceMin as number) || a > (it.priceMax as number))) return fail(`« ${it.label} » : entrez un montant entre ${fcfa(it.priceMin as number)} et ${fcfa(it.priceMax as number)}.`, g.id);
         options.push({ groupId: g.id, groupLabel: g.label, itemId: it.id, label: it.label, ...(k === "none" ? {} : { amount: a }) });
       }
     }
@@ -75,11 +82,13 @@ export function ProductOrder({ p }: { p: Product }) {
 .pd-dish img,.pd-dish .ph{width:46px;height:46px;border-radius:10px;object-fit:cover;flex:none;display:grid;place-items:center;background:var(--sand)}
 .pd-dish small{display:block;color:var(--muted);font-size:.76rem}
 .pdg{border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
-.pdg-h{display:flex;align-items:center;gap:.6rem;width:100%;padding:.7rem .85rem;border:0;background:none;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.pdg-h{display:flex;align-items:center;gap:.6rem;width:100%;padding:.7rem .85rem;color:var(--ink)}
+.pdg-n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--brown);color:#fff;font-size:.78rem;font-weight:800;display:grid;place-items:center}
+.pdg.flash{border-color:var(--red);box-shadow:0 0 0 3px rgba(185,28,28,.28)}
+.pd-todo{margin:0;font-size:.85rem;color:var(--muted)}
 .pdg-t{flex:1;min-width:0;display:grid}.pdg-t small{color:var(--muted);font-size:.76rem}
 .pdg-req,.pdg-opt{flex:none;font-size:.68rem;font-weight:800;padding:.1rem .5rem;border-radius:99px}.pdg-req{background:#ffedd5;color:#c2410c}.pdg-opt{background:#dcfce7;color:#166534}
 .pdg-c{flex:none;min-width:22px;height:22px;border-radius:99px;background:var(--flame);color:#fff;font-size:.74rem;font-weight:800;display:grid;place-items:center}
-.pdg-ch{flex:none;transition:transform .2s;color:var(--muted)}.pdg-ch.up{transform:rotate(180deg)}
 .pdg-b{padding:0 .6rem .7rem;display:grid;gap:.45rem}
 .pd .acc{border-radius:12px}.pd .acc-main{padding:.45rem .6rem;gap:.55rem}
 .pd .acc-main img,.pd .acc-main .ph{width:46px;height:46px;border-radius:9px}
@@ -90,7 +99,6 @@ export function ProductOrder({ p }: { p: Product }) {
 @media(min-width:900px){.pd{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);align-items:start;gap:1.5rem}.pd-media{aspect-ratio:4/3;max-height:none;position:sticky;top:90px}.pd-bar{grid-column:2}}
 @media(min-width:1080px){.pd-bar{bottom:12px}}`;
   const longDesc = (p.description || "").length > 140;
-  const isOpen = (g: OptionGroup, gi: number) => openG[g.id] ?? (Boolean(g.required) || gi === 0);
   const hint = (g: OptionGroup) => (g.role === "variant" ? "Choisissez votre variante" : g.multiple ? "Plusieurs choix possibles" : "Un seul choix");
   return (
     <div className="pd">
@@ -106,43 +114,43 @@ export function ProductOrder({ p }: { p: Product }) {
         {p.description && <div><p className={`pd-desc ${descOpen ? "open" : ""}`}>{p.description}</p>{longDesc && <button type="button" className="pd-more" onClick={() => setDescOpen(!descOpen)}>{descOpen ? "Réduire" : "Lire la suite"}</button>}</div>}
 
         <h2 className="pd-h">Votre commande</h2>
+        {groups.length > 0 && <p className="pd-todo">À compléter : {groups.map((g) => g.label + (g.required ? " *" : "")).join(" · ")}</p>}
         <div className="pd-dish">
           {media[0] && !/\.(mp4|webm|mov)(\?.*)?$/i.test(media[0]) ? <img src={media[0]} alt="" /> : <span className="ph">🍽️</span>}
           <span><strong>✓ {p.name}</strong><small>Sélectionné automatiquement — choisissez la quantité en bas</small></span>
         </div>
-        {range && <div className="pdg" style={{ padding: ".7rem .85rem" }}><label htmlFor="amt" style={{ marginTop: 0 }}>Montant souhaité pour le plat (FCFA) — entre {fcfa(p.price)} et {fcfa(p.priceMax as number)}</label>
+        {range && <div id="grp-dish" className={`pdg ${flash === "dish" ? "flash" : ""}`} style={{ padding: ".7rem .85rem" }}><label htmlFor="amt" style={{ marginTop: 0 }}>Montant souhaité pour le plat (FCFA) — entre {fcfa(p.price)} et {fcfa(p.priceMax as number)}</label>
           <input id="amt" type="number" inputMode="numeric" min={p.price} max={p.priceMax as number} step={50} value={amount} onChange={(e) => setAmount(e.target.value)} /></div>}
 
         {groups.map((g, gi) => {
-          const open = isOpen(g, gi); const n = Object.keys(sel[g.id] || {}).length;
+          const n = Object.keys(sel[g.id] || {}).length;
           return (
-            <section key={g.id} className="pdg">
-              <button type="button" className="pdg-h" aria-expanded={open} onClick={() => setOpenG((s) => ({ ...s, [g.id]: !open }))}>
+            <section key={g.id} id={`grp-${g.id}`} className={`pdg ${flash === g.id ? "flash" : ""}`}>
+              <div className="pdg-h">
+                <span className="pdg-n">{gi + 1}</span>
                 <span className="pdg-t"><strong>{g.label}</strong><small>{hint(g)}</small></span>
                 <span className={g.required ? "pdg-req" : "pdg-opt"}>{g.required ? "Obligatoire" : "Facultatif"}</span>
                 {n > 0 && <span className="pdg-c">{n}</span>}
-                <ChevronDown size={18} className={`pdg-ch ${open ? "up" : ""}`} />
-              </button>
-              {open && (
-                <div className="pdg-b">
-                  {g.items.map((it) => {
-                    const on = sel[g.id]?.[it.id] !== undefined; const k = itemKind(it);
-                    return (
-                      <div key={it.id} className={`acc ${on ? "on" : ""}`}>
-                        <button type="button" className="acc-main" onClick={() => toggle(g, it)} aria-pressed={on}>
-                          <span className={`acc-ind ${g.multiple ? "sq" : ""}`}>{on ? "✓" : ""}</span>
-                          {it.image ? <img src={it.image} alt={it.label} loading="lazy" /> : <span className="ph">🍽️</span>}
-                          <span className="acc-txt"><strong>{it.label}</strong>{it.description && <small className="dsc">{it.description}</small>}
-                            <small>{k === "none" ? (g.role === "sauce" ? "Gratuite" : "Inclus") : k === "fixed" ? `${g.role === "variant" ? "" : "+ "}${fcfa(it.priceMin as number)}` : `De ${fcfa(it.priceMin as number)} à ${fcfa(it.priceMax as number)}`}</small></span>
-                        </button>
-                        {on && k === "range" && <div className="acc-amt"><label>Votre montant pour « {it.label} » (FCFA)</label>
-                          <input type="number" inputMode="numeric" min={it.priceMin as number} max={it.priceMax as number} step={50} value={sel[g.id][it.id]} onChange={(e) => setAmt(g, it, e.target.value)} /></div>}
-                      </div>);
-                  })}
-                </div>)}
+              </div>
+              <div className="pdg-b">
+                {g.items.map((it) => {
+                  const on = sel[g.id]?.[it.id] !== undefined; const k = itemKind(it);
+                  return (
+                    <div key={it.id} className={`acc ${on ? "on" : ""}`}>
+                      <button type="button" className="acc-main" onClick={() => toggle(g, it)} aria-pressed={on}>
+                        <span className={`acc-ind ${g.multiple ? "sq" : ""}`}>{on ? "✓" : ""}</span>
+                        {it.image ? <img src={it.image} alt={it.label} loading="lazy" /> : <span className="ph">🍽️</span>}
+                        <span className="acc-txt"><strong>{it.label}</strong>{it.description && <small className="dsc">{it.description}</small>}
+                          <small>{k === "none" ? (g.role === "sauce" ? "Gratuite" : "Inclus") : k === "fixed" ? `${g.role === "variant" ? "" : "+ "}${fcfa(it.priceMin as number)}` : `De ${fcfa(it.priceMin as number)} à ${fcfa(it.priceMax as number)}`}</small></span>
+                      </button>
+                      {on && k === "range" && <div className="acc-amt"><label>Votre montant pour « {it.label} » (FCFA)</label>
+                        <input type="number" inputMode="numeric" min={it.priceMin as number} max={it.priceMax as number} step={50} value={sel[g.id][it.id]} onChange={(e) => setAmt(g, it, e.target.value)} /></div>}
+                    </div>);
+                })}
+              </div>
             </section>);
         })}
-        {msg && <div className="err" role="alert" style={{ margin: 0 }}>{msg}</div>}
+        {msg && <div id="pd-msg" className="err" role="alert" style={{ margin: 0 }}>{msg}</div>}
       </div>
 
       <div className="pd-bar">
